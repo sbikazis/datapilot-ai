@@ -30,7 +30,12 @@ defaults = {
     "theme_mode": "Light",
     "density": "Comfortable",
     "workspace_mark": "◈",
+    "workspace_subtitle": "ADAPTIVE DATA INTELLIGENCE",
+    "workspace_logo_upload": None,
     "accent_palette": "Violet",
+    "precision": 2,
+    "default_top_n": 12,
+    "show_method_notes": True,
     "nav_page": "Overview",
     "active_filters": {},
     "role_overrides": {},
@@ -38,6 +43,11 @@ defaults = {
 }
 for key, value in defaults.items():
     if key not in st.session_state:
+        st.session_state[key] = value
+
+
+def reset_workspace_preferences():
+    for key, value in defaults.items():
         st.session_state[key] = value
 
 # ── Design system ──────────────────────────────────────────────────────────
@@ -686,10 +696,7 @@ if upload is not None:
             st.info("Uploads are analyzed in the active app session. This build does not provide account login, persistent cloud projects, shared workspaces or external AI processing.")
             st.checkbox("Show methodology notes in reports", value=True, key="show_method_notes")
         st.markdown("---")
-        if st.button("Reset workspace preferences"):
-            for key, value in defaults.items():
-                st.session_state[key] = value
-            st.rerun()
+        st.button("Reset workspace preferences", on_click=reset_workspace_preferences)
         st.caption("Persistent identity, custom logo uploads and cross-device settings require an authenticated storage layer; this page does not pretend those backend capabilities exist.")
 
     st.markdown('<div class="sectionline"></div><div class="subtle">DataPilot AI · Adaptive analysis, transparent calculations and evidence-led exploration. No fabricated causes, forecasts or business assumptions.</div>', unsafe_allow_html=True)
