@@ -159,3 +159,10 @@ This layer does not estimate financial impact, prescribe interventions, prove ca
 ## Implementation checkpoint — Customer-ready first session
 
 The welcome screen now offers a reproducible synthetic order dataset that enters the same analysis pipeline as uploaded files. The sample is generated locally with a fixed seed, bounded row count and fictional identifiers; its synthetic status is disclosed in the interface. This removes the blank-first-run barrier without presenting demo findings as customer evidence. The sample remains session-local and is replaced when a user uploads their own dataset.
+
+
+## Implementation checkpoint — End-to-end customer journey validation
+
+A dedicated integration suite now exercises the synthetic first-run dataset through schema profiling, adaptive domain classification, supported guided objectives, group comparison, time movement, evidence ranking, decision action planning, HTML report rendering and the complete nine-sheet Excel workbook. It also checks that source-row references remain available, action guardrails remain explicit, sample data is reproducible and labeled fictional, and tiny samples produce a limited result instead of a misleading group comparison.
+
+This validates the shared analysis pipeline independently of the Streamlit presentation layer. It is not a browser-based UI automation test and does not verify the hosted Streamlit deployment; those remain separate release checks.
