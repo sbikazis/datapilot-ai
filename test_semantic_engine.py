@@ -46,3 +46,11 @@ def test_semantic_inference_does_not_guess_currency_or_coordinate_system_from_va
     assert result["misc_value"]["semantic_type"] == "Numeric measure"
     assert result["score"]["semantic_type"] == "Numeric measure"
     assert result["created_at"]["semantic_type"] == "Date / time"
+
+
+
+def test_semantic_inference_avoids_partial_word_coordinate_false_positives():
+    frame = pd.DataFrame({"platform": ["web", "mobile"], "latitude": [30.0, 31.0]})
+    result = {item["column"]: item for item in infer_semantic_fields(frame)}
+    assert result["platform"]["semantic_type"] == "Text / category"
+    assert result["latitude"]["semantic_type"] == "Latitude"
