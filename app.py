@@ -821,7 +821,36 @@ if upload is not None:
                     st.warning("No valid date-and-measure pairs remain after filters.")
                 else:
                     fig = build_time_figure(trend)
-                    st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
+                    event = st.plotly_chart(
+                        fig, use_container_width=True,
+                        config={"displaylogo":False,"scrollZoom":True},
+                        on_select="rerun", selection_mode="points",
+                        key="time_trend_chart",
+                    )
+                    selected_periods = selected_point_values(event, ["x"])
+                    if selected_periods:
+                        period_frequency = {"Day":"D","Week":"W","Month":"M","Quarter":"Q","Year":"Y"}[grain]
+                        source_dates = pd.to_datetime(filtered[date_col], errors="coerce")
+                        source_periods = source_dates.dt.to_period(period_frequency).dt.start_time
+                        selected_keys = {
+                            stamp.strftime("%Y-%m-%d")
+                            for stamp in pd.to_datetime(selected_periods, errors="coerce")
+                            if pd.notna(stamp)
+                        }
+                        source_rows = filtered.loc[source_periods.dt.strftime("%Y-%m-%d").isin(selected_keys)]
+                        st.markdown("### Selected periods · source records")
+                        st.caption(f"{len(source_rows):,} source rows contribute to the selected time period(s).")
+                        if not source_rows.empty:
+                            st.dataframe(source_rows.head(500), use_container_width=True, hide_index=True)
+                            st.download_button(
+                                "Download selected period rows",
+                                source_rows.to_csv(index=False).encode("utf-8-sig"),
+                                "datapilot_selected_period_rows.csv",
+                                "text/csv",
+                                key="download_selected_period_rows",
+                            )
+                    else:
+                        st.caption("Select one or more points on the timeline to inspect the exact source records behind those periods.")
 
                     # Evidence-led diagnostics: missing periods, broad shifts and abrupt changes.
                     time_result = analyze_time_series(trend)
