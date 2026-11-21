@@ -175,7 +175,7 @@ def detect_delimiter(sample: str) -> str:
     if not sample.strip():
         return ","
     try:
-        dialect = csv.Sniffer().sniff(sample[:8192], delimiters=",;\\t|")
+        dialect = csv.Sniffer().sniff(sample[:8192], delimiters=",;\t|")
         return dialect.delimiter
     except csv.Error:
         return ","
