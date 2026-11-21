@@ -193,7 +193,7 @@ def to_html_report(title, filename, profile, frame, filtered, findings, workspac
         f"<article><small>{escape(x['kind'])}</small><h3>{escape(x['title'])}</h3><p>{escape(x['detail'])}</p><p class='muted'>Next: {escape(x['action'])}</p></article>"
         for x in findings
     )
-    method_html = "{method_html}" if include_method_notes else ""
+    method_html = "<h2>Method and limitations</h2><p>Findings describe observed patterns and statistical associations. They do not establish causes, forecasts or missing business facts. Review detected field roles and data quality before making decisions.</p>" if include_method_notes else ""
     return f"""<!doctype html><html><head><meta charset='utf-8'><title>{escape(title)}</title>
 <style>
 body{{font:15px/1.6 Arial,sans-serif;background:#f4f6fb;color:#1d2942;margin:0;padding:36px}}
@@ -206,7 +206,7 @@ table{{border-collapse:collapse;width:100%;margin-top:12px}}td,th{{border-bottom
 <h2>Executive snapshot</h2><p>{profile.dataset_kind} · {len(frame):,} rows · {len(frame.columns):,} fields · {profile.quality['missing_cells']:,} missing cells · {profile.quality['duplicate_rows']:,} exact duplicate rows</p>
 <h2>Key measures</h2><table><tr><th>Measure</th><th>Valid</th><th>Total</th><th>Average</th><th>Median</th></tr>{''.join(metrics)}</table>
 <h2>Evidence-led findings</h2>{insight_html}
-<h2>Method and limitations</h2><p>Findings are calculated from the selected data. They describe observed patterns and statistical associations; they do not establish causes, forecasts, or missing business facts. Review detected field roles and data quality before making decisions.</p>
+{method_html}
 <p class='muted'>DataPilot AI · Adaptive Data Intelligence</p></main></body></html>"""
 
 def excel_export(frame, profile, filtered):
@@ -669,11 +669,11 @@ if upload is not None:
             st.text_input("Workspace subtitle", value="ADAPTIVE DATA INTELLIGENCE", key="workspace_subtitle")
             st.markdown("### Appearance")
             st.text_input("Brand mark / initials", key="workspace_mark", max_chars=3)
-            st.file_uploader("Workspace logo (PNG/JPG/WebP)", type=["png","jpg","jpeg","webp"], key="workspace_logo_upload")
             if st.session_state.get("workspace_logo_upload") is not None:
                 if st.button("Remove workspace logo"):
                     st.session_state.pop("workspace_logo_upload", None)
                     st.rerun()
+            st.file_uploader("Workspace logo (PNG/JPG/WebP)", type=["png","jpg","jpeg","webp"], key="workspace_logo_upload")
             st.selectbox("Accent palette", ["Violet","Ocean","Emerald","Amber"], key="accent_palette")
             st.selectbox("Theme", ["Light","Dark"], key="theme_mode")
             st.selectbox("Density", ["Comfortable","Compact"], key="density")
