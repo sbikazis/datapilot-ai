@@ -20,7 +20,12 @@ _KIND_WEIGHT = {
 
 def _sample_size(finding: dict[str, Any]) -> int | None:
     text = " ".join(str(finding.get(key, "")) for key in ("detail", "title"))
-    candidates = re.findall(r"(\d[\d,]*)\s+(?:valid observations|paired observations|observations|records|rows|timestamps)", text, flags=re.I)
+    # For "24 of 40 valid observations", use the group sample (24), not
+    # the overall denominator (40). Otherwise use the stated paired/record count.
+    group_match = re.search(r"(\d[\d,]*)\s+of\s+\d[\d,]*\s+valid observations", text, flags=re.I)
+    if group_match:
+        return int(group_match.group(1).replace(",", ""))
+    candidates = re.findall(r"(\d[\d,]*)\s+(?:paired observations|observations|records|rows|timestamps)", text, flags=re.I)
     values = []
     for value in candidates:
         try:
