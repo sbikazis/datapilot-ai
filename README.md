@@ -4,7 +4,7 @@
 
 ## Current capabilities
 
-- A dedicated workspace with Overview, Analysis Studio, Data Explorer, Reports and Settings.
+- A dedicated workspace with Overview, Guided Analysis, Decisions, Analysis Studio, Data Explorer, Reports and Settings.
 - Configurable workspace name, subtitle, uploaded logo or initials, accent palette, light/dark appearance and compact/comfortable density (session-local).
 - Functional analysis defaults for starting view, Top N, numeric precision and report methodology notes.
 - CSV, TSV, XLSX, XLS and JSON table ingestion, including worksheet selection for Excel workbooks.
@@ -23,16 +23,24 @@ Choose **Explore the sample dataset** on the welcome screen to open a reproducib
 
 Suggested first steps: compare revenue by region, inspect time movement, review order status and data quality, then export an executive report. Uploading your own file replaces the sample for that session.
 
+## Validation
+
+The automated suite covers individual analysis engines and a full sample-customer journey: schema and domain detection, guided group/time analysis, evidence ranking, action-register traceability, HTML report generation and all nine Excel workbook sheets. Small-sample behavior and the synthetic-data disclosure are also regression-tested.
+
+```bash
+pytest -q
+```
+
 ## Run locally
 
-\`\`\`bash
+```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pip install pytest
 pytest -q
 streamlit run app.py
-\`\`\`
+```
 
 ## Trust and limitations
 
@@ -41,9 +49,9 @@ streamlit run app.py
 - IQR outliers are review prompts, not automatic data errors.
 - Field-role overrides are user-controlled; ambiguous values should be reviewed before relying on an analysis.
 - The app does not invent currency, tax, refund, shipping, inventory, forecasts or other missing business facts.
-- Files and workspace preferences are session-local. User accounts, persistent cloud projects, team collaboration, saved report history, PDF generation and payment processing are not implemented.
+- Files and workspace preferences are session-local. User accounts, persistent cloud projects, team collaboration, saved report history, native PDF generation and payment processing are not implemented.
 - Avoid uploading unnecessary personal or sensitive information.
 
 ## Product direction
 
-The next engineering work is broader schema inference and file diagnostics, chart cross-filtering and row-level drill-down, stronger insight ranking, polished PDF/HTML reporting, accessibility and deployment verification. Optional generative AI must remain opt-in, evidence-grounded and privacy-transparent.
+The next release priorities are deployment verification, accessibility review, broader file diagnostics and commercial readiness. Optional generative AI must remain opt-in, evidence-grounded and privacy-transparent.
