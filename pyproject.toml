@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "datapilot-ai"
 version = "0.1.2"
-description = "Auditable sales data cleaning and reporting for small businesses"
+description = "Adaptive data profiling, analysis and business intelligence"
 requires-python = ">=3.10"
-dependencies = ["pandas>=2.1", "openpyxl>=3.1", "xlrd>=2.0.1", "streamlit>=1.35"]
+dependencies = ["pandas>=2.1", "openpyxl>=3.1", "xlrd>=2.0.1", "streamlit>=1.40", "plotly>=5.18"]
 
 [project.optional-dependencies]
 test = ["pytest>=8.0"]

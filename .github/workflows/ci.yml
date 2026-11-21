@@ -25,6 +25,6 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
       - name: Run engine tests
-        run: pytest -q test_engine.py
+        run: pytest -q
       - name: Check Streamlit app imports
         run: python -c "import app"

@@ -1,6 +1,15 @@
 # DataPilot AI
 
-A first working MVP for small businesses to clean sales exports and understand revenue, recorded costs, gross profit, margin, order value, product performance and monthly trends.
+Adaptive data intelligence for CSV, TSV, Excel and JSON datasets. DataPilot profiles each uploaded file first, then builds its analysis around the fields and patterns it actually detects.
+
+## What it does
+
+- Detects date/time fields, numeric measures, categories and identifier-like columns.
+- Profiles missing values, duplicate records, constant fields and unusually extreme numeric values.
+- Produces data-derived findings with plain-language explanations and suggested follow-up checks.
+- Supports interactive group comparisons, distributions, time aggregation, correlation matrices and scatter exploration.
+- Exports the analyzed dataset and a structured JSON profile.
+- Retains a specialist sales analysis when the uploaded data contains the expected sales fields.
 
 ## Run locally
 
@@ -9,34 +18,22 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pip install pytest
-pytest -q test_engine.py
+pytest -q
 streamlit run app.py
 ```
 
-## Input format
+## Supported input formats
 
-Required fields (common aliases are detected): `order_id`, `order_date`, `product`, `category`, `quantity`, `unit_price`, `unit_cost`. Optional: `customer_region`.
+CSV, TSV, XLSX, XLS and JSON tables.
 
-## Outputs
+The analyzer uses conservative heuristics to classify columns. Always review the detected field roles before relying on a result, especially when numeric-looking identifiers or ambiguous date formats are present.
 
-- Cleaned CSV with calculated revenue, cost, gross profit and margin.
-- Rejected-row CSV with explicit validation reasons.
-- Printable HTML report.
+## Important limits
 
-## Calculation definitions
-
-- Revenue = quantity × unit price
-- Cost = quantity × unit cost
-- Gross profit = revenue − cost
-- Gross margin = gross profit ÷ revenue × 100
-- Average order value = revenue ÷ distinct order count
-
-No currency, tax, returns, shipping, payment fees or inventory values are inferred. Those are included only when supported by source data. This is an analytics aid, not certified accounting software.
-
-## Privacy
-
-Use only data you are authorized to process. Avoid unnecessary personal/customer information. Do not publish customer-level exports or reports publicly.
-
-## Current status
-
-This is an early MVP. Hosting, payment processing, user accounts, secure persistent storage and production security review are not yet implemented.
+- Automated findings describe statistical patterns and associations; they do not prove causes.
+- Correlation is not causation. Outlier flags are review prompts, not automatic errors.
+- The current release does not connect to a generative AI model, external business systems, or live data sources. Its explanations are generated from transparent rules and statistics.
+- It does not invent currency, tax, refund, shipping, inventory or other missing business facts.
+- It is an analytics aid, not certified accounting or professional advice.
+- Files are processed in the app session. Avoid uploading unnecessary personal or sensitive information.
+- User accounts, secure persistent storage, payment processing and production security review are not implemented yet.
