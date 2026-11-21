@@ -110,8 +110,17 @@ button[kind="primary"]{background:linear-gradient(110deg,#6250dc,#8a70ef)!import
 .sectionline{height:1px;background:var(--line);margin:19px 0}
 .pill{display:inline-block;padding:4px 9px;border-radius:99px;background:#f0edff;color:#6755d9;font-size:.69rem;font-weight:800}
 .empty{background:#fff;border:1px dashed #ccd3e2;border-radius:17px;padding:28px;text-align:center;color:#77839a}
-.stProgress>div>div>div{background:linear-gradient(90deg,#6955e8,#21b8b2)}
-@media(max-width:900px){.block-container{padding:1rem 1rem 3rem}.hero{padding:22px}.hero h1{font-size:1.6rem!important}}
+.upload-panel{background:linear-gradient(135deg,#fff 0%,#f7f6ff 100%);border:1px solid #dedaf8;border-radius:19px;padding:19px 22px 12px;box-shadow:0 10px 28px rgba(45,42,100,.055)}
+.upload-guidance{height:100%;min-height:150px;background:#fff;border:1px solid var(--line);border-radius:17px;padding:18px 19px;box-shadow:0 6px 20px rgba(25,39,74,.035)}
+.format-list{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 3px}
+.format-list span{display:inline-flex;align-items:center;padding:5px 9px;border-radius:8px;background:#f1efff;color:#5948c9;font-size:.7rem;font-weight:800;letter-spacing:.04em}
+.loaded-dataset{display:flex;align-items:center;gap:12px;padding:12px 16px;margin:0 0 18px;background:#fff;border:1px solid #dcece8;border-radius:13px}
+.loaded-dataset strong{color:var(--ink);font-size:.9rem}
+.loaded-dot{width:9px;height:9px;border-radius:50%;background:#21a783;box-shadow:0 0 0 4px #e4f6f0;flex:none}
+[data-testid="stFileUploader"]{border:1px dashed #aaa0e9;border-radius:14px;background:rgba(255,255,255,.78);padding:8px}
+[data-testid="stFileUploader"] section{background:transparent}
+[data-testid="stFileUploader"] button{border-radius:9px}
+@media(max-width:900px){.block-container{padding:1rem 1rem 3rem}.hero{padding:22px}.hero h1{font-size:1.6rem!important}.upload-panel{padding:16px}.upload-guidance{min-height:0}.pagehead{align-items:flex-start;flex-direction:column}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -255,11 +264,8 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.markdown("**DATA SOURCE**")
-    upload = st.file_uploader("Upload a dataset", type=["csv", "tsv", "xlsx", "xls", "json"], help="CSV, TSV, Excel or JSON")
-    st.caption("Files stay in this app session. Do not upload sensitive personal data.")
-    if upload is not None:
-        st.success(f"Loaded · {upload.name}")
+    st.markdown("**WORKSPACE STATUS**")
+    st.caption("Your dataset and analysis stay in this active app session.")
     st.markdown("---")
     st.markdown("**WORKSPACE**")
     st.caption(st.session_state.workspace_name)
@@ -274,6 +280,41 @@ st.markdown(f"""
  <div class="hero-meta">DISCOVER &nbsp;·&nbsp; INVESTIGATE &nbsp;·&nbsp; EXPLAIN &nbsp;·&nbsp; DECIDE</div>
 </div>
 """, unsafe_allow_html=True)
+
+# Primary upload action belongs in the workspace, not hidden in the sidebar.
+if upload is None:
+    upload_left, upload_right = st.columns([1.35, .65], gap="large")
+    with upload_left:
+        st.markdown("""
+        <div class="upload-panel">
+          <div class="kicker">START YOUR ANALYSIS</div>
+          <h2 style="margin:5px 0 7px">Bring your dataset into DataPilot</h2>
+          <p class="subtle" style="margin:0">Drop a file here or browse your device. Your original values remain the source of truth.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        upload = st.file_uploader(
+            "Choose a dataset",
+            type=["csv", "tsv", "xlsx", "xls", "json"],
+            help="Supported formats: CSV, TSV, Excel and JSON",
+            key="workspace_dataset_upload",
+            label_visibility="collapsed",
+        )
+    with upload_right:
+        st.markdown("""
+        <div class="upload-guidance">
+          <div class="card-label">SUPPORTED FORMATS</div>
+          <div class="format-list"><span>CSV</span><span>TSV</span><span>XLSX</span><span>XLS</span><span>JSON</span></div>
+          <div class="sectionline"></div>
+          <div class="card-label">YOUR DATA</div>
+          <p class="card-copy">Files are processed in this active app session. Avoid uploading sensitive personal or confidential data.</p>
+          <p class="card-copy">No account, cloud project or external AI processing is implied.</p>
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    st.markdown(
+        f'<div class="loaded-dataset"><span class="loaded-dot"></span><div><strong>{escape(upload.name)}</strong><div class="subtle">Dataset ready · processed in this session</div></div></div>',
+        unsafe_allow_html=True,
+    )
 
 if upload is None:
     if page == "Settings":
