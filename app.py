@@ -23,7 +23,7 @@ from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
 from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
-from visual_identity import THEME_OPTIONS, resolve_theme, build_theme_css, theme_chart_colors
+from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -454,6 +454,7 @@ if dataset_name is None:
         st.text_input("Workspace name", key="workspace_name", max_chars=48)
         st.selectbox("Appearance", ["Light", "Dark"], key="theme_mode")
         st.selectbox("Visual direction", THEME_OPTIONS, key="visual_theme", help="Automatic selects a visual theme from the detected dataset domain.")
+        st.markdown(theme_gallery_html(st.session_state.visual_theme), unsafe_allow_html=True)
         st.selectbox("Interface density", ["Comfortable", "Compact"], key="density")
         st.info("Workspace branding and interface preferences are session-local in this release. Persistent user accounts and cloud-saved settings are not implemented.")
     else:
@@ -1282,6 +1283,7 @@ if dataset_name is not None:
                     st.rerun()
             st.file_uploader("Workspace logo (PNG/JPG/WebP)", type=["png","jpg","jpeg","webp"], key="workspace_logo_upload")
             st.selectbox("Visual direction", THEME_OPTIONS, key="visual_theme", help="Automatic selects a visual theme from the detected dataset domain. You can lock a theme here.")
+            st.markdown(theme_gallery_html(st.session_state.visual_theme, domain_assessment["domain"]), unsafe_allow_html=True)
             st.selectbox("Theme", ["Light","Dark"], key="theme_mode")
             st.selectbox("Density", ["Comfortable","Compact"], key="density")
         with right:
