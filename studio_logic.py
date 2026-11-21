@@ -166,3 +166,15 @@ def build_evidence_findings(
 
     findings.sort(key=lambda item: item[0], reverse=True)
     return [item for _, item in findings[:limit]]
+
+
+
+def detect_delimiter(sample: str) -> str:
+    """Detect common tabular delimiters conservatively, defaulting to comma."""
+    if not sample.strip():
+        return ","
+    try:
+        dialect = __import__("csv").Sniffer().sniff(sample[:8192], delimiters=",;\\t|")
+        return dialect.delimiter
+    except (csv.Error, NameError):
+        return ","
