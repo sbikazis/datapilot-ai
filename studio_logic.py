@@ -144,6 +144,43 @@ def build_evidence_findings(
                     "action": f"Compare the remaining groups in {col}",
                 }))
 
+    for dim in categorical:
+        cardinality = int(frame[dim].nunique(dropna=True))
+        if not 2 <= cardinality <= 12 or len(frame) < 20:
+            continue
+        for measure in numeric:
+            work = frame[[dim, measure]].copy()
+            work[dim] = work[dim].astype("string").fillna("(Missing)")
+            work[measure] = pd.to_numeric(work[measure], errors="coerce")
+            work = work.dropna(subset=[measure])
+            if len(work) < 20:
+                continue
+            minimum_group_size = max(3, math.ceil(len(work) * 0.10))
+            overall_median = float(work[measure].median())
+            q1, q3 = work[measure].quantile([0.25, 0.75])
+            robust_scale = max(abs(overall_median), float(q3 - q1) / 1.349, 1e-9)
+            groups = work.groupby(dim, dropna=False)[measure].agg(["median", "count"])
+            groups = groups[groups["count"] >= minimum_group_size]
+            if len(groups) < 2:
+                continue
+            groups = groups.assign(
+                deviation=(groups["median"] - overall_median).abs() / robust_scale
+            ).sort_values("deviation", ascending=False)
+            leader = groups.iloc[0]
+            if float(leader["deviation"]) < 0.5:
+                continue
+            group_name = str(groups.index[0])
+            group_median = float(leader["median"])
+            difference = group_median - overall_median
+            pct = (difference / abs(overall_median) * 100) if overall_median else None
+            comparison = f"{difference:+,.3f} vs overall" if pct is None else f"{pct:+.1f}% vs overall"
+            findings.append((72, {
+                "kind": "segment difference",
+                "title": f"{measure} differs in {group_name} ({dim})",
+                "detail": f"Median {measure} for {group_name} is {group_median:,.3f}, compared with an overall median of {overall_median:,.3f} ({comparison}). The group has {int(leader['count']):,} of {len(work):,} valid observations; this is a descriptive difference, not a causal explanation.",
+                "action": f"Drill into {dim}={group_name} and compare the full {measure} distribution",
+            }))
+
     for col in dates:
         parsed = pd.to_datetime(frame[col], errors="coerce").dropna()
         if len(parsed) >= 2:
