@@ -23,6 +23,7 @@ from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
 from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
+from visual_identity import THEME_OPTIONS, resolve_theme, build_theme_css, theme_chart_colors
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -40,6 +41,7 @@ defaults = {
     "workspace_subtitle": "ADAPTIVE DATA INTELLIGENCE",
     "workspace_logo_upload": None,
     "accent_palette": "Violet",
+    "visual_theme": "Automatic · domain aware",
     "precision": 2,
     "default_top_n": 12,
     "show_method_notes": True,
@@ -255,6 +257,13 @@ px.defaults.template = go.layout.Template(layout=go.Layout(
 if st.session_state.density == "Compact":
     st.markdown("<style>.block-container{padding-top:.8rem;padding-bottom:2rem}[data-testid='stMetric']{min-height:84px;padding:10px 13px}.card,.insight{padding:12px 14px;margin-bottom:7px}</style>", unsafe_allow_html=True)
 
+# Apply a complete, accessible visual system before rendering the workspace.
+_initial_visual_theme = resolve_theme(st.session_state.visual_theme, "General / mixed data")
+st.markdown(
+    build_theme_css(_initial_visual_theme, st.session_state.theme_mode, st.session_state.density),
+    unsafe_allow_html=True,
+)
+
 # ── Helpers ────────────────────────────────────────────────────────────────
 def read_upload(upload, sheet_name=None):
     name = upload.name.lower()
@@ -444,6 +453,7 @@ if dataset_name is None:
         st.caption("These controls customize this active browser session. They do not create an account or persist across sessions.")
         st.text_input("Workspace name", key="workspace_name", max_chars=48)
         st.selectbox("Appearance", ["Light", "Dark"], key="theme_mode")
+        st.selectbox("Visual direction", THEME_OPTIONS, key="visual_theme", help="Automatic selects a visual theme from the detected dataset domain.")
         st.selectbox("Interface density", ["Comfortable", "Compact"], key="density")
         st.info("Workspace branding and interface preferences are session-local in this release. Persistent user accounts and cloud-saved settings are not implemented.")
     else:
@@ -582,6 +592,30 @@ if dataset_name is not None:
         override=selected_domain_override,
     )
     profile.dataset_kind = domain_assessment["domain"]
+    # Resolve the visual language from the selected domain, unless the user chose a fixed theme.
+    active_visual_theme = resolve_theme(st.session_state.visual_theme, domain_assessment["domain"])
+    st.markdown(
+        build_theme_css(active_visual_theme, st.session_state.theme_mode, st.session_state.density),
+        unsafe_allow_html=True,
+    )
+    chart_colors = theme_chart_colors(active_visual_theme)
+    plot_text = active_visual_theme["dark" if st.session_state.theme_mode == "Dark" else "light"]["text"]
+    plot_grid = active_visual_theme["dark" if st.session_state.theme_mode == "Dark" else "light"]["line"]
+    px.defaults.color_discrete_sequence = chart_colors
+    px.defaults.color_continuous_scale = [
+        active_visual_theme["light"]["accent_soft"],
+        active_visual_theme["light"]["accent_2"],
+        active_visual_theme["light"]["accent"],
+        active_visual_theme["light"]["sidebar"],
+    ]
+    px.defaults.template = go.layout.Template(layout=go.Layout(
+        font=dict(family="Inter, Segoe UI, sans-serif", color=plot_text),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
+        yaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
+        colorway=chart_colors,
+    ))
+
 
     # Build a profile view that respects role corrections.
     profile.numeric_columns = numeric_cols
@@ -1247,7 +1281,7 @@ if dataset_name is not None:
                     st.session_state.pop("workspace_logo_upload", None)
                     st.rerun()
             st.file_uploader("Workspace logo (PNG/JPG/WebP)", type=["png","jpg","jpeg","webp"], key="workspace_logo_upload")
-            st.selectbox("Accent palette", ["Violet","Ocean","Emerald","Amber"], key="accent_palette")
+            st.selectbox("Visual direction", THEME_OPTIONS, key="visual_theme", help="Automatic selects a visual theme from the detected dataset domain. You can lock a theme here.")
             st.selectbox("Theme", ["Light","Dark"], key="theme_mode")
             st.selectbox("Density", ["Comfortable","Compact"], key="density")
         with right:
