@@ -8,6 +8,7 @@
 - Configurable workspace name, mark/initials, accent palette, light/dark appearance and compact/comfortable density (session-local).
 - CSV, TSV, XLSX, XLS and JSON table ingestion, including worksheet selection for Excel workbooks.
 - Automatic field profiling for measures, categories, identifiers and dates, with a reviewable field-role override.
+- Conservative semantic hints for percentages, currency-like amounts (without guessing the currency), durations, coordinates, booleans, URLs and personal-data identifiers such as email/phone.
 - Global category filters applied across overview findings, analysis views, exploration and reports.
 - Adaptive analysis recommendations, descriptive statistics, IQR outlier review, category concentration, date coverage and evidence-backed relationship findings.
 - Interactive group comparisons, time trends, distributions, scatter plots, category composition and source-row exploration.
