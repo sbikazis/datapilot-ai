@@ -323,6 +323,7 @@ for meta in profile.columns:
         role = meta["role"]
     else:
         role = override
+        meta["role"] = f"{override} · user override"
     if role == "Measure":
         converted = pd.to_numeric(data[col], errors="coerce")
         if converted.notna().any():
