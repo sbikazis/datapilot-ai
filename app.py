@@ -81,6 +81,15 @@ button[kind="primary"]{background:linear-gradient(110deg,#6250dc,#8a70ef)!import
 """, unsafe_allow_html=True)
 
 
+accent_colors = {
+    "Violet": ("#6955e8", "#8a78f5"),
+    "Ocean": ("#1679c5", "#39b7d8"),
+    "Emerald": ("#16866f", "#42b99b"),
+    "Amber": ("#b87516", "#e5ad4b"),
+}
+accent_primary, accent_secondary = accent_colors.get(st.session_state.accent_palette, accent_colors["Violet"])
+st.markdown(f"<style>:root{{--violet:{accent_primary};--violet2:{accent_secondary}}}.brandmark{{background:linear-gradient(135deg,{accent_primary},{accent_secondary})}}.stButton>button[kind='primary']{{background:linear-gradient(110deg,{accent_primary},{accent_secondary})!important}}</style>", unsafe_allow_html=True)
+
 if st.session_state.theme_mode == "Dark":
     st.markdown("""
     <style>
@@ -158,10 +167,10 @@ def to_html_report(title, filename, profile, frame, filtered, findings, workspac
         if len(s):
             metrics.append(f"<tr><td>{col}</td><td>{len(s):,}</td><td>{s.sum():,.3f}</td><td>{s.mean():,.3f}</td><td>{s.median():,.3f}</td></tr>")
     insight_html = "".join(
-        f"<article><small>{x['kind']}</small><h3>{x['title']}</h3><p>{x['detail']}</p><p class='muted'>Next: {x['action']}</p></article>"
+        f"<article><small>{escape(x['kind'])}</small><h3>{escape(x['title'])}</h3><p>{escape(x['detail'])}</p><p class='muted'>Next: {escape(x['action'])}</p></article>"
         for x in findings
     )
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{title}</title>
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{escape(title)}</title>
 <style>
 body{{font:15px/1.6 Arial,sans-serif;background:#f4f6fb;color:#1d2942;margin:0;padding:36px}}
 main{{max-width:1050px;margin:auto;background:white;border:1px solid #e4e8f1;border-radius:20px;padding:38px}}
@@ -169,7 +178,7 @@ header{{background:linear-gradient(110deg,#111a30,#514995);color:white;padding:2
 h1{{margin:0}}header p{{color:#dce2f7}}h2{{margin-top:32px}}article{{border-left:4px solid #7561e6;background:#fafaff;padding:12px 17px;margin:12px 0;border-radius:9px}}
 small{{color:#705cdb;text-transform:uppercase;font-weight:bold;letter-spacing:1px}}.muted{{color:#75819a;font-size:13px}}
 table{{border-collapse:collapse;width:100%;margin-top:12px}}td,th{{border-bottom:1px solid #e6eaf2;text-align:left;padding:10px}}th{{background:#f6f7fb}}
-</style></head><body><main><header><h1>{title}</h1><p>{workspace} · {filename}</p><p>Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} · {len(filtered):,} filtered of {len(frame):,} source rows</p></header>
+</style></head><body><main><header><h1>{escape(title)}</h1><p>{escape(workspace)} · {escape(filename)}</p><p>Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} · {len(filtered):,} filtered of {len(frame):,} source rows</p></header>
 <h2>Executive snapshot</h2><p>{profile.dataset_kind} · {len(frame):,} rows · {len(frame.columns):,} fields · {profile.quality['missing_cells']:,} missing cells · {profile.quality['duplicate_rows']:,} exact duplicate rows</p>
 <h2>Key measures</h2><table><tr><th>Measure</th><th>Valid</th><th>Total</th><th>Average</th><th>Median</th></tr>{''.join(metrics)}</table>
 <h2>Evidence-led findings</h2>{insight_html}
@@ -190,6 +199,8 @@ defaults = {
     "workspace_name": "My workspace",
     "theme_mode": "Light",
     "density": "Comfortable",
+    "workspace_mark": "◈",
+    "accent_palette": "Violet",
     "nav_page": "Overview",
     "active_filters": {},
     "role_overrides": {},
@@ -201,8 +212,8 @@ for key, value in defaults.items():
 
 # ── Sidebar shell ───────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div class="brand"><div class="brandmark">◈</div><div><div class="brandname">DataPilot AI</div><div class="brandtag">INTELLIGENCE STUDIO</div></div></div>', unsafe_allow_html=True)
-    st.caption("YOUR DATA. UNDERSTOOD.")
+    st.markdown('<div class="brand"><div class="brandmark">{escape(st.session_state.workspace_mark[:3])}</div><div><div class="brandname">DataPilot AI</div><div class="brandtag">INTELLIGENCE STUDIO</div></div></div>', unsafe_allow_html=True)
+    st.caption(escape(st.session_state.get("workspace_subtitle", "YOUR DATA. UNDERSTOOD.")))
     st.markdown("---")
     page = st.radio(
         "WORKSPACE",
@@ -602,6 +613,8 @@ elif page == "Settings":
         st.text_input("Workspace name", key="workspace_name", max_chars=48)
         st.text_input("Workspace subtitle", value="ADAPTIVE DATA INTELLIGENCE", key="workspace_subtitle")
         st.markdown("### Appearance")
+        st.text_input("Brand mark / initials", key="workspace_mark", max_chars=3)
+        st.selectbox("Accent palette", ["Violet","Ocean","Emerald","Amber"], key="accent_palette")
         st.selectbox("Theme", ["Light","Dark"], key="theme_mode")
         st.selectbox("Density", ["Comfortable","Compact"], key="density")
     with right:
