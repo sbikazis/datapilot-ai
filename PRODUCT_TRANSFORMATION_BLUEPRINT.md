@@ -132,3 +132,10 @@ The domain lens now scores explicit schema-name signals across sales/commerce, c
 ## Implementation checkpoint — Evidence-ranked recommendations
 
 The recommendation layer now orders deterministic findings using a documented review-priority heuristic: finding type, sample support stated in the finding, and current filtered-row count. Each displayed finding includes its priority score, evidence label, sample context where available, rationale and next investigative action. The score is explicitly not a probability, confidence interval or significance test. The Overview also suggests concrete next questions only when the necessary numeric, categorical or date roles exist. These questions and ranked findings are included in the JSON analysis export.
+
+
+## Implementation checkpoint — Executive report intelligence
+
+The Reports workspace now builds a structured report snapshot from the original dataset, active filtered view, detected field profile, quality checks, ranked findings and generated next questions. The self-contained HTML report includes an executive snapshot, key measure totals/averages/medians/ranges, prioritized findings and next steps, missingness by field, active filters and methodology caveats. Its layout is responsive and print-friendly; users can use the browser's print dialog to save it as PDF.
+
+The XLSX export now contains separate sheets for analyzed data, filtered data, executive summary, key measures, priority findings, data quality, field dictionary, next questions and applied filters. The JSON export contains the same report snapshot for reproducibility. No external service or paid model is used, and the report does not imply that PDF generation, scheduled delivery or saved report history are native app features.
