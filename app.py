@@ -43,12 +43,12 @@ defaults = {
 }
 for key, value in defaults.items():
     if key not in st.session_state:
-        st.session_state[key] = value
+        st.session_state[key] = value.copy() if isinstance(value, dict) else value
 
 
 def reset_workspace_preferences():
     for key, value in defaults.items():
-        st.session_state[key] = value
+        st.session_state[key] = value.copy() if isinstance(value, dict) else value
 
 
 def apply_analysis_defaults():
