@@ -24,6 +24,7 @@ from studio_logic import recommend_visualization, numeric_summary, safe_correlat
 from semantic_engine import infer_semantic_fields
 from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
+from navigation_state import activate_sample_workspace
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -71,6 +72,11 @@ def go_to_page(page, mode=None):
 def apply_analysis_defaults():
     st.session_state.pop("studio_mode", None)
     st.session_state.pop("cmp_limit", None)
+
+
+def start_sample_dataset():
+    """Set navigation and sample state before Streamlit rebuilds keyed widgets."""
+    activate_sample_workspace(st.session_state)
 
 
 
@@ -462,10 +468,13 @@ if dataset_name is None:
         with left:
             st.markdown("## Start with a real analysis, even before you have a file")
             st.write("Explore a fictional order dataset to see how profiling, guided analysis, evidence-ranked decisions and reports work end to end.")
-            if st.button("Explore the sample dataset", type="primary", use_container_width=True):
-                st.session_state["use_sample_dataset"] = True
-                st.session_state["nav_page"] = "Overview"
-                st.rerun()
+            st.button(
+                "Explore the sample dataset",
+                type="primary",
+                use_container_width=True,
+                on_click=start_sample_dataset,
+                key="start_sample_dataset",
+            )
             st.caption("No upload required · generated locally · no external AI processing")
             st.markdown("## Or bring your own data")
             st.write("Upload a dataset and DataPilot will profile its fields, check data quality, identify useful comparisons, and recommend a starting analysis. You stay in control of the definitions and calculations.")
