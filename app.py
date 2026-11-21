@@ -36,7 +36,7 @@ st.set_page_config(
 # ── Session state ──────────────────────────────────────────────────────────
 defaults = {
     "workspace_name": "My workspace",
-    "theme_mode": "Light",
+    "theme_mode": "Dark",
     "density": "Comfortable",
     "workspace_mark": "◈",
     "workspace_subtitle": "ADAPTIVE DATA INTELLIGENCE",
