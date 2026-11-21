@@ -11,13 +11,21 @@ if upload:
         result = analyze_sales(raw)
         s = result.summary
         st.success(f"Analysis complete: {s['valid_rows']} valid rows; {s['rejected_rows']} rejected rows.")
-        cols = st.columns(4)
-        labels = [("Revenue", s["total_revenue"]), ("Gross profit", s["gross_profit"]), ("Gross margin", s["gross_margin_pct"]), ("Orders", s["order_count"])]
-        for col, (label, value) in zip(cols, labels):
-            shown = "—" if value is None else (f"{value:,.2f}%" if label == "Gross margin" else f"{value:,.2f}" if label != "Orders" else str(value))
+        cols = st.columns(5)
+        metrics = [
+            ("Revenue", s["total_revenue"], False),
+            ("Gross profit", s["gross_profit"], False),
+            ("Gross margin", s["gross_margin_pct"], True),
+            ("Orders", s["order_count"], False),
+            ("Average order value", s["average_order_value"], False),
+        ]
+        for col, (label, value, is_percent) in zip(cols, metrics):
+            shown = "—" if value is None else (f"{value:,.2f}%" if is_percent else f"{value:,.2f}" if label != "Orders" else str(value))
             col.metric(label, shown)
         st.subheader("Product performance")
         st.dataframe(result.by_product, use_container_width=True)
+        st.subheader("Category performance")
+        st.dataframe(result.by_category, use_container_width=True)
         st.subheader("Monthly performance")
         st.dataframe(result.by_month, use_container_width=True)
         st.download_button("Download cleaned CSV", result.clean.to_csv(index=False).encode("utf-8-sig"), "datapilot_cleaned_sales.csv", "text/csv")
