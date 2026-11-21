@@ -67,7 +67,7 @@ def _parse_dates(values: pd.Series) -> pd.Series:
 
 
 def _parse_number(value: object) -> float:
-    """Parse common decimal/thousands conventions without silently guessing mixed formats."""
+    """Parse common decimal/thousands conventions; malformed values become NaN."""
     if pd.isna(value):
         return float("nan")
     if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -81,8 +81,8 @@ def _parse_number(value: object) -> float:
     text = re.sub(r"[^\d,.\-+]", "", text)
     if not text or text in {"-", "+", ".", ","}:
         return float("nan")
+
     if "," in text and "." in text:
-        # The right-most separator is treated as the decimal mark.
         decimal_mark = "," if text.rfind(",") > text.rfind(".") else "."
         thousands_mark = "." if decimal_mark == "," else ","
         text = text.replace(thousands_mark, "").replace(decimal_mark, ".")
@@ -90,17 +90,27 @@ def _parse_number(value: object) -> float:
         parts = text.split(",")
         if len(parts) == 2 and len(parts[1]) in (1, 2):
             text = ".".join(parts)
-        else:
+        elif len(parts) > 1 and 1 <= len(parts[0]) <= 3 and all(len(part) == 3 for part in parts[1:]):
             text = "".join(parts)
-    elif text.count(".") > 1:
+        else:
+            return float("nan")
+    elif "." in text:
         parts = text.split(".")
-        if len(parts[-1]) in (1, 2):
-            text = "".join(parts[:-1]) + "." + parts[-1]
-        else:
+        if len(parts) == 2:
+            if len(parts[1]) == 3 and 1 <= len(parts[0]) <= 3:
+                text = "".join(parts)
+        elif len(parts) > 2 and 1 <= len(parts[0]) <= 3 and all(len(part) == 3 for part in parts[1:]):
             text = "".join(parts)
-    number = float(text)
-    return -number if negative else number
+        else:
+            return float("nan")
 
+    if not re.fullmatch(r"[+-]?\d+(?:\.\d+)?", text):
+        return float("nan")
+    try:
+        number = float(text)
+    except ValueError:
+        return float("nan")
+    return -number if negative else number
 
 def load_sales_file(file: str | BinaryIO | BytesIO, filename: str | None = None) -> pd.DataFrame:
     """Load CSV or Excel without guessing a currency."""
