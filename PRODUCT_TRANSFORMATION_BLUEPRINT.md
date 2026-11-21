@@ -139,3 +139,11 @@ The recommendation layer now orders deterministic findings using a documented re
 The Reports workspace now builds a structured report snapshot from the original dataset, active filtered view, detected field profile, quality checks, ranked findings and generated next questions. The self-contained HTML report includes an executive snapshot, key measure totals/averages/medians/ranges, prioritized findings and next steps, missingness by field, active filters and methodology caveats. Its layout is responsive and print-friendly; users can use the browser's print dialog to save it as PDF.
 
 The XLSX export now contains separate sheets for analyzed data, filtered data, executive summary, key measures, priority findings, data quality, field dictionary, next questions and applied filters. The JSON export contains the same report snapshot for reproducibility. No external service or paid model is used, and the report does not imply that PDF generation, scheduled delivery or saved report history are native app features.
+
+
+
+## Implementation checkpoint — Guided analysis experience
+
+A dedicated Guided Analysis workspace now starts from user intent rather than a chart menu. It exposes only objectives supported by detected field roles: measure profiling, group comparison, monthly time movement, numeric relationship review and data-quality review. Each path validates selected fields, handles empty/invalid samples, reports denominators and limitations, and returns supporting source-row indices for drill-down. Group comparisons suppress groups below the chosen minimum sample size; time movement does not fill missing months with zero; relationship results explicitly avoid causal interpretation. Results can be exported as CSV, and supporting records remain inspectable in the active filtered view.
+
+This remains deterministic statistical analysis, not generative AI. Guided analyses are session-local and do not save projects or reports automatically.

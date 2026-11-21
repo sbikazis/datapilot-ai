@@ -17,6 +17,7 @@ from time_intelligence import analyze_time_series
 from domain_intelligence import assess_domain
 from recommendation_engine import rank_findings, build_next_questions
 from report_intelligence import build_report_data, render_html_report, report_workbook_sheets
+from guided_analysis import available_guided_paths, build_guided_result
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
@@ -290,7 +291,7 @@ with st.sidebar:
     st.markdown("---")
     page = st.radio(
         "WORKSPACE",
-        ["Overview", "Analysis Studio", "Data Explorer", "Reports", "Settings"],
+        ["Overview", "Guided Analysis", "Analysis Studio", "Data Explorer", "Reports", "Settings"],
         key="nav_page",
         label_visibility="collapsed",
     )
@@ -650,6 +651,84 @@ if upload is not None:
             st.button("Create a report", key="overview_open_reports", on_click=go_to_page, args=("Reports",))
 
         st.caption("All observations are computed from the uploaded dataset and active filters. Priority scores organize review order; they do not establish probability, causality, forecasts or business outcomes.")
+
+    # ── Guided Analysis ────────────────────────────────────────────────────────
+    elif page == "Guided Analysis":
+        st.markdown("## Guided Analysis")
+        st.caption("Start with a question. DataPilot checks which analyses your detected fields can support, then walks you through the relevant choices.")
+        paths = available_guided_paths(numeric_cols, category_cols, date_cols)
+        path_labels = {item["id"]: item["label"] for item in paths}
+        selected_objective = st.selectbox(
+            "1 · What would you like to understand?",
+            list(path_labels),
+            format_func=lambda value: path_labels[value],
+            key="guided_objective",
+        )
+        st.markdown("### 2 · Configure the evidence")
+        measure = dimension = date_field = x_measure = y_measure = None
+        if selected_objective in ("measure_profile", "compare_groups", "time_movement"):
+            measure = st.selectbox("Numeric measure", numeric_cols, key="guided_measure")
+        if selected_objective == "compare_groups":
+            dimension = st.selectbox("Group / dimension", category_cols, key="guided_dimension")
+            min_group_size = st.slider("Minimum valid records per group", 1, 20, 3, key="guided_min_group")
+        if selected_objective == "time_movement":
+            date_field = st.selectbox("Date / time field", date_cols, key="guided_date")
+            st.caption("The guided time view groups observations by calendar month.")
+        if selected_objective == "relationship":
+            x_measure, y_measure = st.columns(2)
+            with x_measure:
+                guided_x = st.selectbox("X measure", numeric_cols, key="guided_x")
+            with y_measure:
+                guided_y = st.selectbox("Y measure", [field for field in numeric_cols if field != guided_x], key="guided_y")
+        if selected_objective == "quality_review":
+            st.caption("Review completeness, distinct values and exact duplicate rows across the current filtered dataset.")
+        if st.button("Run guided analysis", type="primary", key="run_guided_analysis"):
+            try:
+                result = build_guided_result(
+                    filtered,
+                    selected_objective,
+                    measure=measure,
+                    dimension=dimension,
+                    date=date_field,
+                    x_measure=guided_x if selected_objective == "relationship" else None,
+                    y_measure=guided_y if selected_objective == "relationship" else None,
+                    min_group_size=min_group_size if selected_objective == "compare_groups" else 3,
+                )
+                st.session_state["guided_result"] = result
+                st.session_state["guided_result_objective"] = selected_objective
+            except ValueError as exc:
+                st.error(str(exc))
+        result = st.session_state.get("guided_result")
+        if result and st.session_state.get("guided_result_objective") == selected_objective:
+            st.markdown('<div class="sectionline"></div>', unsafe_allow_html=True)
+            st.markdown("### 3 · Your findings")
+            if result["status"] == "empty":
+                st.info(result["message"])
+            else:
+                st.caption(result["message"])
+                for label, value in result["summary"].items():
+                    if value is not None and isinstance(value, (int, float)):
+                        st.metric(label.replace("_", " ").title(), fmt(value) if isinstance(value, float) else f"{value:,}")
+                table = result["table"]
+                if not table.empty:
+                    if selected_objective == "compare_groups":
+                        fig = px.bar(table, x="group", y="median", color="median", color_continuous_scale=["#c7c0fb", "#6955e8", "#21b8b2"], labels={"median": "Median", "group": dimension})
+                        fig.update_layout(height=360, margin=dict(t=20, b=20, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
+                        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+                    elif selected_objective == "time_movement":
+                        fig = px.line(table, x="period", y="mean", markers=True, labels={"period": "Month", "mean": "Average"})
+                        fig.update_layout(height=360, margin=dict(t=20, b=20, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+                    st.dataframe(table, use_container_width=True, hide_index=True)
+                    st.download_button("Download guided result (CSV)", table.to_csv(index=False).encode("utf-8-sig"), "datapilot_guided_result.csv", "text/csv", key="download_guided_result")
+                if result["source_indices"]:
+                    source_rows = filtered.loc[filtered.index.intersection(result["source_indices"])]
+                    with st.expander(f"Inspect supporting source records · {len(source_rows):,} rows"):
+                        st.dataframe(source_rows.head(500), use_container_width=True, hide_index=True)
+                        st.download_button("Download supporting records", source_rows.to_csv(index=False).encode("utf-8-sig"), "datapilot_guided_source_rows.csv", "text/csv", key="download_guided_source_rows")
+            st.caption("Guided results are descriptive and traceable to the current filtered rows. They do not establish causality or predict future outcomes.")
+        else:
+            st.info("Choose an objective and its fields, then run the analysis. Only supported objectives are shown for this dataset.")
 
     # ── Analysis Studio ────────────────────────────────────────────────────────
     elif page == "Analysis Studio":
