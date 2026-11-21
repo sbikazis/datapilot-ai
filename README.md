@@ -7,7 +7,9 @@ A first working MVP for small businesses to clean sales exports and understand r
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e '.[test]'
+pip install -r requirements.txt
+pip install pytest
+pytest -q test_engine.py
 streamlit run app.py
 ```
 
@@ -37,4 +39,4 @@ Use only data you are authorized to process. Avoid unnecessary personal/customer
 
 ## Current status
 
-MVP source code and automated tests are included. Hosting, payment processing, user accounts, secure persistent storage and production security review are not yet implemented.
+This is an early MVP. Hosting, payment processing, user accounts, secure persistent storage and production security review are not yet implemented.

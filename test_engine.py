@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from datapilot.engine import analyze_sales, map_columns, build_html_report
+from engine import analyze_sales, map_columns, build_html_report
 
 
 def sample():
