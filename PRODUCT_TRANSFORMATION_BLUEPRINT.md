@@ -122,3 +122,8 @@ Persistent settings, cloud identity and cross-device logo storage remain intenti
 The insight engine now compares numeric measures across categorical segments. It reports group medians against the overall baseline, includes valid sample sizes and suppresses comparisons where groups are too small. The explanation explicitly labels the result as descriptive rather than causal. Regression tests cover both a material difference and a tiny-group case.
 
 Next: time-window change detection with comparison baselines, multiple-testing safeguards, richer distribution shape diagnostics and user-controlled insight thresholds.
+
+
+## Implementation checkpoint — Adaptive domain intelligence
+
+The domain lens now scores explicit schema-name signals across sales/commerce, customers/audience, workforce, finance/accounting, marketing/acquisition and operations/service. It exposes matched evidence columns and a cautious confidence indicator; ambiguous schemas remain in a general/mixed lens. Users can override the lens without changing source data. Domain-specific analysis playbooks show questions, rationale and required fields, and mark a template available only when its required field roles exist. These are deterministic schema heuristics, not generative AI or proof of business context.
