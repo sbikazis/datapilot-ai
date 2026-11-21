@@ -576,7 +576,7 @@ if upload is not None:
                     fig = px.bar(counts.sort_values("records"), x="records", y=dim, orientation="h", color="records", color_continuous_scale=["#c7c0fb","#6955e8"])
                 fig.update_layout(height=430, margin=dict(t=20,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
                 event = st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, on_select="rerun", selection_mode="points", key="category_composition_chart")
-                fields = ["label"] if chart in ["Donut","Treemap"] else [dim]
+                fields = ["label"] if chart in ["Donut","Treemap"] else ["y"]
                 selected_categories = selected_point_values(event, fields)
                 if selected_categories:
                     selected_rows = filtered[filtered[dim].astype(str).isin(selected_categories)]
