@@ -171,3 +171,10 @@ This validates the shared analysis pipeline independently of the Streamlit prese
 ## Visual identity system — domain-aware experience
 
 The interface now supports five complete visual directions rather than a single accent-color swap: Nebula / sci-fi, Heritage / archive, Botanical / nature, Executive / minimal and Oceanic / research. Automatic mode maps the detected dataset domain to a visual direction; a user can lock any direction manually. Each direction defines separate light and dark semantic tokens for canvas, surfaces, text, muted text, borders, accents, sidebar and hero treatment. Responsive layouts, keyboard focus, reduced-motion support, consistent form controls and Plotly palettes are included. Theme choice affects presentation only and never changes calculations or source data.
+
+
+### Client-ready reporting (implemented)
+- Reports support recipient/client or project name, report author, and an optional analyst-authored context note.
+- Author-provided context is explicitly labelled and escaped; it is never presented as a dataset-derived finding.
+- Client metadata is included in the HTML report and executive-summary workbook sheet.
+- This improves delivery quality for consultants and small teams, but does not itself implement billing, accounts, persistence, or guarantee revenue.
