@@ -1,205 +1,247 @@
-import io
-import streamlit as st
+from __future__ import annotations
+
+from io import BytesIO
+import json
+
 import pandas as pd
 import plotly.express as px
-from engine import analyze_sales, build_html_report, load_sales_file
+import plotly.graph_objects as go
+import streamlit as st
 
-st.set_page_config(page_title="DataPilot AI | Sales Intelligence", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
+from universal_engine import profile_dataset, grouped_summary, time_summary
+from engine import analyze_sales, load_sales_file, build_html_report
+
+st.set_page_config(page_title="DataPilot AI · Intelligent data studio", page_icon="◈", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
-:root { --ink:#21143f; --muted:#746b8b; --violet:#7652e8; --pink:#ed75b5; --cyan:#54d5d0; --gold:#f5bd62; }
-.stApp { background: radial-gradient(ellipse at 8% 0%, rgba(118,82,232,.13), transparent 34%), radial-gradient(ellipse at 95% 12%, rgba(84,213,208,.13), transparent 30%), linear-gradient(135deg,#f8f6ff 0%,#f4f9ff 52%,#fff7fb 100%); color:var(--ink); font-family:'DM Sans',sans-serif; }
-[data-testid="stHeader"] { background:rgba(248,246,255,.75); }
-.block-container { max-width:1440px; padding-top:2.2rem; padding-bottom:4rem; }
-h1,h2,h3 { font-family:'Manrope',sans-serif!important; color:#241643!important; letter-spacing:-.035em; }
-h1 { font-size:2.55rem!important; font-weight:800!important; }
-[data-testid="stSidebar"] { background:linear-gradient(180deg,#241744 0%,#382365 55%,#4a3478 100%); }
-[data-testid="stSidebar"] * { color:#f8f4ff!important; }
-[data-testid="stSidebar"] [data-testid="stFileUploader"] { background:rgba(255,255,255,.10); border:1px dashed rgba(255,255,255,.4); border-radius:18px; padding:12px; }
-[data-testid="stMetric"] { background:rgba(255,255,255,.86); border:1px solid rgba(118,82,232,.14); border-radius:20px; padding:18px 20px; box-shadow:0 10px 30px rgba(49,31,91,.055); min-height:126px; }
-[data-testid="stMetricLabel"] { color:#766d8d!important; font-weight:700; }
-[data-testid="stMetricValue"] { color:#2b1b50!important; font-family:'Manrope',sans-serif; font-weight:800; }
-[data-testid="stTabs"] button { border-radius:12px 12px 0 0; font-weight:700; }
-.stButton>button,.stDownloadButton>button { border:0; border-radius:13px; background:linear-gradient(100deg,#7552e8,#9a68ee); color:white; font-weight:700; padding:.65rem 1.1rem; box-shadow:0 8px 18px rgba(118,82,232,.18); }
-.stButton>button:hover,.stDownloadButton>button:hover { color:white; border:0; filter:brightness(1.06); transform:translateY(-1px); }
-[data-testid="stDataFrame"],[data-testid="stTable"] { border:1px solid #e9e3f5; border-radius:16px; overflow:hidden; }
-div[data-testid="stAlert"] { border-radius:14px; }
-.hero { background:linear-gradient(112deg,#2d1d50 0%,#6546b4 58%,#a45db5 100%); color:white; padding:28px 32px; border-radius:26px; box-shadow:0 18px 40px rgba(57,36,99,.18); position:relative; overflow:hidden; margin-bottom:24px; }
-.hero:after { content:""; position:absolute; width:260px;height:260px;border-radius:50%;right:-65px;top:-125px;background:rgba(84,213,208,.23); }
-.hero h1 { color:white!important; margin:0 0 8px 0; font-size:2.15rem!important; }
-.hero p { color:#eee7ff; margin:0; max-width:760px; }
-.eyebrow { color:#9de9e2; text-transform:uppercase; font-size:.72rem; font-weight:800; letter-spacing:.16em; margin-bottom:10px; }
-.section-kicker { color:#8b75bd; font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.13em; margin:12px 0 4px; }
-.insight { background:linear-gradient(110deg,rgba(118,82,232,.10),rgba(84,213,208,.12)); border:1px solid rgba(118,82,232,.13); border-radius:18px; padding:16px 19px; color:#35265a; margin:8px 0 18px; }
-.small-note { color:#7a718e; font-size:.84rem; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;600;700;800&display=swap');
+:root{--navy:#111827;--muted:#8b98ad;--violet:#7558f5;--cyan:#39c6c3;--pink:#ed75ad;--gold:#f4bd61}
+.stApp{background:radial-gradient(ellipse at 5% 0%,rgba(117,88,245,.16),transparent 31%),radial-gradient(ellipse at 95% 8%,rgba(57,198,195,.12),transparent 28%),#f5f7fc;color:#172033;font-family:'DM Sans',sans-serif}
+.block-container{max-width:1500px;padding-top:1.4rem;padding-bottom:4rem}
+h1,h2,h3{font-family:'Manrope',sans-serif!important;letter-spacing:-.035em;color:#172033!important}
+h1{font-weight:800!important}
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#121a2c,#20284a 68%,#322b61)}
+[data-testid="stSidebar"] *{color:#f4f5ff!important}
+[data-testid="stMetric"]{background:rgba(255,255,255,.92);border:1px solid #e8ebf4;border-radius:18px;padding:16px 18px;box-shadow:0 8px 24px rgba(26,37,67,.045);min-height:112px}
+[data-testid="stMetricLabel"]{color:#77839a!important;font-weight:700}
+[data-testid="stMetricValue"]{font-family:'Manrope',sans-serif;color:#1c2740;font-weight:800}
+.stButton>button,.stDownloadButton>button{border:0;border-radius:12px;background:linear-gradient(100deg,#7055ee,#8d6df6);color:white;font-weight:700;padding:.62rem 1rem}
+.stButton>button:hover,.stDownloadButton>button:hover{color:white;border:0;filter:brightness(1.08)}
+[data-testid="stTabs"] button{font-weight:700}
+[data-testid="stDataFrame"]{border:1px solid #e6eaf2;border-radius:14px;overflow:hidden}
+div[data-testid="stAlert"]{border-radius:13px}
+.hero{background:linear-gradient(112deg,#121b30 0%,#34366d 60%,#6551ae 100%);color:white;border-radius:24px;padding:27px 31px;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:0 16px 38px rgba(27,31,67,.15)}
+.hero:after{content:"";position:absolute;width:280px;height:280px;right:-80px;top:-140px;border-radius:50%;background:rgba(57,198,195,.2)}
+.hero h1{color:#fff!important;font-size:2.25rem!important;margin:0 0 8px}
+.hero p{color:#dce3ff;margin:0;max-width:850px}
+.eyebrow{font-size:.7rem;letter-spacing:.17em;text-transform:uppercase;font-weight:800;color:#8de4dd;margin-bottom:8px}
+.panel{background:rgba(255,255,255,.86);border:1px solid #e8ebf4;border-radius:18px;padding:17px 19px;margin-bottom:12px}
+.panel-title{font-weight:800;color:#25304a;margin-bottom:5px}
+.muted{color:#7e8aa0;font-size:.86rem}
+.insight{background:white;border:1px solid #e8ebf4;border-left:4px solid #7558f5;border-radius:15px;padding:15px 17px;margin:8px 0;box-shadow:0 5px 18px rgba(30,42,75,.035)}
+.insight small{color:#8b78d9;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.insight strong{display:block;color:#202b45;margin:4px 0}
+[data-testid="stFileUploader"]{background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.35);border-radius:15px;padding:10px}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <div class="hero">
-  <div class="eyebrow">Sales intelligence studio</div>
-  <h1>Make every sale tell a story.</h1>
-  <p>Turn raw exports into reliable numbers, clear patterns and decisions you can act on — without pretending missing data exists.</p>
+ <div class="eyebrow">DATA INTELLIGENCE · NOT JUST A DASHBOARD</div>
+ <h1>Understand your data. Find your next move.</h1>
+ <p>DataPilot examines the structure, quality, patterns and relationships in each file, then adapts the analysis to the data it actually contains.</p>
 </div>
 """, unsafe_allow_html=True)
 
-with st.sidebar:
-    st.markdown("## ✦ DataPilot AI")
-    st.caption("YOUR BUSINESS, IN FOCUS")
-    st.markdown("---")
-    upload = st.file_uploader("Import your sales data", type=["csv", "xlsx", "xls"], help="CSV, Excel XLSX or XLS. Maximum 200 MB.")
-    st.markdown("---")
-    st.markdown("**Built for clarity**")
-    st.caption("• Transparent validation\n\n• No invented currency\n\n• Row-level rejection reasons\n\n• Downloadable outputs")
-    st.markdown("---")
-    st.caption("Your file is processed in this app session. Avoid uploading unnecessary customer-identifying information.")
-
-if not upload:
-    left, right = st.columns([1.15, .85], gap="large")
-    with left:
-        st.markdown("### Your next clear business decision starts here.")
-        st.write("Upload a sales export and DataPilot will map your columns, validate each row, calculate core profitability metrics and reveal product, category and time trends.")
-        st.markdown("""
-        <div class="insight"><b>Designed around trustworthy analysis</b><br>Every rejected row includes a reason. Every metric is calculated from accepted source rows. No silent assumptions about currency, taxes or returns.</div>
-        """, unsafe_allow_html=True)
-    with right:
-        st.markdown("### What you’ll unlock")
-        for title, detail in [
-            ("01 · Performance pulse", "Revenue, cost, gross profit, margin and average order value."),
-            ("02 · Product intelligence", "Find the products and categories contributing most."),
-            ("03 · Time patterns", "Explore monthly movement and spot changes."),
-            ("04 · Clean exports", "Download validated data, rejected rows and a shareable report."),
-        ]:
-            st.markdown(f"**{title}**")
-            st.caption(detail)
-
-if upload:
+def load_any(upload):
+    name = upload.name.lower()
+    if name.endswith(".xlsx"):
+        return pd.read_excel(upload, engine="openpyxl")
+    if name.endswith(".xls"):
+        return pd.read_excel(upload, engine="xlrd")
+    if name.endswith(".json"):
+        return pd.read_json(upload)
+    if name.endswith(".tsv"):
+        return pd.read_csv(upload, sep="\t")
     try:
-        raw = load_sales_file(upload, upload.name)
-        result = analyze_sales(raw)
-    except Exception as exc:
-        st.error(f"Could not analyze this file: {exc}")
-        st.info("Check the required columns and review the file format. Your original file is not modified.")
-        st.stop()
-    
-    s = result.summary
-    st.markdown('<div class="section-kicker">01 / Executive overview</div>', unsafe_allow_html=True)
-    st.markdown("## Your business at a glance")
-    valid_rate = (s["valid_rows"] / s["total_rows"] * 100) if s["total_rows"] else 0
-    if s["rejected_rows"]:
-        st.warning(f"Data quality needs attention: {s['valid_rows']} of {s['total_rows']} rows accepted ({valid_rate:.1f}%). Download the rejection log to see the exact source row and reason.")
-    else:
-        st.success(f"All {s['total_rows']} source rows passed validation. No rows were silently discarded.")
-    
-    metric_cols = st.columns(5)
-    metrics = [
-        ("Revenue", s["total_revenue"], False),
-        ("Gross profit", s["gross_profit"], False),
-        ("Gross margin", s["gross_margin_pct"], True),
-        ("Orders", s["order_count"], False),
-        ("Avg. order value", s["average_order_value"], False),
-    ]
-    for col, (label, value, pct) in zip(metric_cols, metrics):
-        shown = "—" if value is None else (f"{value:,.2f}%" if pct else f"{value:,.2f}" if label != "Orders" else f"{value:,}")
-        col.metric(label, shown)
-    
-    with st.expander("How these numbers are calculated", expanded=False):
-        st.write("Revenue = quantity × unit price. Cost = quantity × unit cost. Gross profit = revenue − recorded cost. Gross margin = gross profit ÷ revenue. Average order value = revenue ÷ distinct order IDs.")
-        st.caption("These are operational analytics, not certified accounting. Taxes, refunds, shipping, payment fees and currency are not inferred.")
-    
-    st.markdown('<div class="section-kicker">02 / Explore the signals</div>', unsafe_allow_html=True)
-    tab_overview, tab_products, tab_time, tab_quality, tab_exports = st.tabs(["✦ Overview", "◈ Products & categories", "⌁ Trends", "✓ Data quality", "↓ Exports"])
-    
-    with tab_overview:
-        a, b = st.columns([1.1, .9], gap="large")
-        with a:
-            st.markdown("### Revenue by category")
-            fig = px.pie(result.by_category, names="category", values="revenue", hole=.68, color_discrete_sequence=["#7652e8","#54d5d0","#ed75b5","#f5bd62","#7b9df4","#8bcf9b"])
-            fig.update_traces(textposition="inside", textinfo="percent+label", marker=dict(line=dict(color="#f8f6ff", width=3)))
-            fig.update_layout(showlegend=False, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=330, font=dict(family="DM Sans",color="#38285b"))
-            st.plotly_chart(fig, use_container_width=True)
-        with b:
-            st.markdown("### Where profit comes from")
-            profit_data = result.by_category.sort_values("gross_profit", ascending=True)
-            fig = px.bar(profit_data, x="gross_profit", y="category", orientation="h", color="gross_profit", color_continuous_scale=["#ed75b5","#7652e8","#54d5d0"])
-            fig.update_layout(coloraxis_showscale=False, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=330, xaxis_title="Gross profit", yaxis_title="", font=dict(family="DM Sans",color="#38285b"))
-            st.plotly_chart(fig, use_container_width=True)
-        st.markdown('<div class="insight"><b>Read the numbers in context.</b> Revenue is not the same as profit. Compare both before deciding which products deserve more attention.</div>', unsafe_allow_html=True)
+        return pd.read_csv(upload)
+    except UnicodeDecodeError:
+        upload.seek(0)
+        return pd.read_csv(upload, encoding="latin-1")
 
-        st.markdown("### ✦ DataPilot intelligence brief")
-        top_product = result.by_product.iloc[0]
-        top_category = result.by_category.iloc[0]
-        insight_cols = st.columns(3)
-        with insight_cols[0]:
-            st.markdown("**Revenue leader**")
-            st.write(f"{top_product['product']} leads with {top_product['revenue']:,.2f} in recorded revenue.")
-        with insight_cols[1]:
-            st.markdown("**Category leader**")
-            st.write(f"{top_category['category']} is the largest category at {top_category['revenue']:,.2f} revenue.")
-        with insight_cols[2]:
-            st.markdown("**Profit watch**")
-            loss_products = result.by_product[result.by_product["gross_profit"] < 0]
-            if not loss_products.empty:
-                st.write(f"{len(loss_products)} product(s) have negative gross profit. Review their pricing and recorded unit costs.")
-            elif s["gross_margin_pct"] is not None and s["gross_margin_pct"] < 15:
-                st.write("Overall gross margin is below 15%. Review pricing and unit costs.")
-            else:
-                st.write("No product-level gross losses detected in the accepted rows.")
-        st.caption("These are transparent, data-derived signals — not forecasts or claims about causes. A connected generative AI analyst is a separate capability and is not enabled in this version.")
-    
-    with tab_products:
-        st.markdown("### Product performance")
-        product_options = ["All categories"] + sorted(result.by_category["category"].dropna().astype(str).unique().tolist())
-        selected_category = st.selectbox("Focus on a category", product_options)
-        product_data = result.clean.copy()
-        if selected_category != "All categories":
-            product_data = product_data[product_data["category"].astype(str) == selected_category]
-        product_rollup = product_data.groupby("product", as_index=False).agg(units=("quantity","sum"), revenue=("revenue","sum"), cost=("cost","sum"), gross_profit=("gross_profit","sum")).sort_values("revenue", ascending=False)
-        fig = px.bar(product_rollup.head(15).sort_values("revenue"), x="revenue", y="product", orientation="h", color="gross_profit", color_continuous_scale=["#ed75b5","#7652e8","#54d5d0"], hover_data=["units","cost","gross_profit"])
-        fig.update_layout(coloraxis_showscale=False, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Revenue", yaxis_title="", font=dict(family="DM Sans",color="#38285b"))
-        st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(product_rollup, use_container_width=True, hide_index=True)
-    
-    with tab_time:
-        st.markdown("### Performance over time")
-        monthly = result.by_month.copy()
-        if len(monthly):
-            fig = px.line(monthly, x="month", y=["revenue","gross_profit"], markers=True, color_discrete_sequence=["#7652e8","#ed75b5"], labels={"value":"Amount","month":"Month","variable":"Metric"})
-            fig.update_traces(line=dict(width=3))
-            fig.update_layout(hovermode="x unified", margin=dict(t=15,b=15,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(family="DM Sans",color="#38285b"))
-            st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(monthly, use_container_width=True, hide_index=True)
-    
-    with tab_quality:
-        st.markdown("### Validation & trust")
-        q1, q2, q3 = st.columns(3)
-        q1.metric("Source rows", f"{s['total_rows']:,}")
-        q2.metric("Accepted", f"{s['valid_rows']:,}")
-        q3.metric("Rejected", f"{s['rejected_rows']:,}")
-        st.progress(valid_rate / 100, text=f"{valid_rate:.1f}% accepted")
-        st.markdown("#### Detected column mapping")
-        mapping_df = pd.DataFrame([{"Source column": source, "DataPilot field": target} for source, target in result.column_mapping.items()])
-        st.dataframe(mapping_df, use_container_width=True, hide_index=True)
-        if not result.rejected.empty:
-            st.markdown("#### Rejected rows — with exact reasons")
-            display_rejected = result.rejected.drop(columns=["rejection_reason"], errors="ignore")
-            st.dataframe(result.rejected, use_container_width=True, hide_index=True)
-        else:
-            st.success("No rejected rows. All source records passed the current validation rules.")
-    
-    with tab_exports:
-        st.markdown("### Take your work with you")
-        clean_csv = result.clean.drop(columns=["_source_row"], errors="ignore").to_csv(index=False).encode("utf-8-sig")
-        rejected_csv = result.rejected.to_csv(index=False).encode("utf-8-sig")
-        report_html = build_html_report(result).encode("utf-8")
-        d1, d2, d3 = st.columns(3)
-        d1.download_button("↓ Clean dataset", clean_csv, "datapilot_cleaned_sales.csv", "text/csv", use_container_width=True)
-        d2.download_button("↓ Rejection log", rejected_csv, "datapilot_rejected_rows.csv", "text/csv", use_container_width=True, disabled=result.rejected.empty)
-        d3.download_button("↓ Business report", report_html, "datapilot_business_report.html", "text/html", use_container_width=True)
-        st.caption("The cleaned file includes calculated revenue, cost, gross profit, margin and month. The rejection log includes the original row values and reasons.")
-    
+with st.sidebar:
+    st.markdown("## ◈ DataPilot AI")
+    st.caption("ADAPTIVE DATA INTELLIGENCE")
     st.markdown("---")
-    st.caption("DataPilot AI · Clear numbers. Better decisions. · Session-only processing")
-    
+    upload = st.file_uploader("Drop a dataset", type=["csv","tsv","xlsx","xls","json"], help="CSV, TSV, Excel or JSON")
+    st.markdown("---")
+    st.markdown("**Analysis principles**")
+    st.caption("• Detect structure automatically\n\n• Keep source values traceable\n\n• Explain findings in plain language\n\n• Never invent missing business facts")
+    st.markdown("---")
+    st.caption("Files are processed in the current app session. Avoid uploading sensitive personal data.")
+
+if upload is None:
+    a,b=st.columns([1.15,.85],gap="large")
+    with a:
+        st.markdown("## One file. A tailored analysis.")
+        st.write("Upload a spreadsheet or data export. DataPilot identifies dates, measures, categories and identifiers, checks data quality, and builds the right views from the columns it finds.")
+        st.markdown('<div class="panel"><div class="panel-title">The difference</div><div class="muted">A fixed dashboard asks your file to fit its template. DataPilot first studies your file, then builds the analysis around it.</div></div>',unsafe_allow_html=True)
+        st.markdown("### Built to adapt")
+        st.write("Sales and commerce · customer data · operations · time series · workforce data · general tabular datasets")
+    with b:
+        st.markdown("### What happens after upload")
+        for n,t,d in [("01","Understand","Detect column types, likely roles and dataset domain."),("02","Validate","Measure missingness, duplicates, constants and unusual values."),("03","Discover","Surface distributions, group patterns, time movement and relationships."),("04","Explain","Turn the strongest signals into readable findings and next steps.")]:
+            st.markdown(f'<div class="panel"><div class="panel-title">{n} · {t}</div><div class="muted">{d}</div></div>',unsafe_allow_html=True)
+
+if upload is not None:
+    try:
+        raw=load_any(upload)
+        profile=profile_dataset(raw)
+    except Exception as exc:
+        st.error(f"DataPilot could not profile this file: {exc}")
+        st.info("Check that the file contains a readable table with column headers.")
+        st.stop()
+
+    data=profile.data.copy()
+    st.markdown(f"### {upload.name}")
+    st.caption(f"{profile.dataset_kind} · {len(data):,} rows · {len(data.columns):,} columns · analysis adapted to detected fields")
+    k1,k2,k3,k4,k5=st.columns(5)
+    k1.metric("Records",f"{len(data):,}")
+    k2.metric("Fields",f"{len(data.columns):,}")
+    k3.metric("Numeric measures",f"{len(profile.numeric_columns):,}")
+    k4.metric("Date fields",f"{len(profile.date_columns):,}")
+    k5.metric("Missing cells",f"{profile.quality['missing_cells']:,}",f"{profile.quality['missing_pct']}% of all cells")
+
+    tabs=st.tabs(["✦ Intelligence brief","⌁ Explore & compare","◷ Time analysis","◎ Relationships","✓ Data quality","↓ Export"])
+    with tabs[0]:
+        st.markdown("## What stands out")
+        st.caption("Findings are calculated from the uploaded data. They describe patterns; they do not claim causes.")
+        for item in profile.insights:
+            st.markdown(f'<div class="insight"><small>{item["kind"]}</small><strong>{item["title"]}</strong><div>{item["detail"]}</div><div class="muted">Suggested next step: {item["action"]}</div></div>',unsafe_allow_html=True)
+        if profile.numeric_columns:
+            st.markdown("### Distribution snapshot")
+            selected=st.selectbox("Choose a measure to inspect",profile.numeric_columns,key="dist_measure")
+            fig=px.histogram(data,x=selected,marginal="box",nbins=35,color_discrete_sequence=["#7558f5"])
+            fig.update_layout(height=390,margin=dict(t=20,b=15,l=10,r=10),paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",font=dict(color="#39445c"))
+            st.plotly_chart(fig,use_container_width=True)
+        else:
+            st.info("No numeric measures were confidently detected. Use the data preview and column profile to inspect the fields.")
+
+    with tabs[1]:
+        st.markdown("## Ask the dataset a question")
+        if profile.numeric_columns and profile.categorical_columns:
+            c1,c2,c3=st.columns([1.2,1.2,1])
+            with c1: group=st.selectbox("Break down by",profile.categorical_columns)
+            with c2: measure=st.selectbox("Measure",profile.numeric_columns)
+            with c3: agg=st.selectbox("Calculate",["sum","mean","median","count","min","max"])
+            limit=st.slider("Number of groups to show",5,50,15)
+            summary=grouped_summary(data,group,measure,agg).head(limit)
+            fig=px.bar(summary.sort_values("value"),x="value",y=group,orientation="h",color="value",color_continuous_scale=["#ed75ad","#7558f5","#39c6c3"],hover_data={group:True,"value":":,.3f"})
+            fig.update_layout(height=max(350,min(760,summary.shape[0]*32+100)),coloraxis_showscale=False,margin=dict(t=20,b=20,l=10,r=10),paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig,use_container_width=True)
+            st.dataframe(summary,use_container_width=True,hide_index=True)
+            top=summary.iloc[0]
+            st.success(f"Highest {agg} of {measure}: {top[group]} ({top['value']:,.3f}).")
+        else:
+            st.info("This view becomes available when the file contains at least one numeric measure and one category/identifier field.")
+        st.markdown("### Interactive data filters")
+        filter_col=st.selectbox("Filter records by field",["None"]+profile.categorical_columns,key="filter_col")
+        filtered=data.copy()
+        if filter_col!="None":
+            options=sorted(data[filter_col].dropna().astype(str).unique().tolist())
+            chosen=st.multiselect(f"Keep values in {filter_col}",options,default=options[:min(10,len(options))])
+            filtered=filtered[filtered[filter_col].astype(str).isin(chosen)]
+        st.caption(f"Showing {len(filtered):,} of {len(data):,} rows after filters.")
+        st.dataframe(filtered.head(1000),use_container_width=True,hide_index=True)
+
+    with tabs[2]:
+        st.markdown("## Time intelligence")
+        if profile.date_columns and profile.numeric_columns:
+            dcol=st.selectbox("Date field",profile.date_columns)
+            mcol=st.selectbox("Measure",profile.numeric_columns,key="time_measure")
+            freq=st.segmented_control("Time grain",["Day","Week","Month","Quarter","Year"],default="Month")
+            tagg=st.selectbox("Aggregation",["sum","mean","median","count"],key="time_agg")
+            trend=time_summary(data,dcol,mcol,freq or "Month",tagg)
+            fig=px.line(trend,x="period",y="value",markers=True,area=True,color_discrete_sequence=["#7558f5"])
+            fig.update_traces(line=dict(width=3),fillcolor="rgba(117,88,245,.10)")
+            fig.update_layout(hovermode="x unified",height=410,margin=dict(t=20,b=20,l=10,r=10),paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig,use_container_width=True)
+            st.dataframe(trend,use_container_width=True,hide_index=True)
+            if len(trend)>=2:
+                first=float(trend.iloc[0]["value"]); last=float(trend.iloc[-1]["value"])
+                if first!=0:
+                    st.info(f"First to last period change: {(last-first)/abs(first)*100:+.1f}% ({first:,.2f} → {last:,.2f}). This compares endpoints, not a forecast.")
+        else:
+            st.info("A reliable time analysis needs at least one detected date field and one numeric measure.")
+
+    with tabs[3]:
+        st.markdown("## Relationships between measures")
+        if len(profile.numeric_columns)>=2:
+            corr=profile.correlations
+            fig=px.imshow(corr,text_auto=".2f",color_continuous_scale="RdBu",zmin=-1,zmax=1,aspect="auto")
+            fig.update_layout(height=max(380,len(corr.columns)*48),margin=dict(t=25,b=20,l=20,r=20))
+            st.plotly_chart(fig,use_container_width=True)
+            st.caption("Correlation measures linear association between numeric columns. It does not establish causation.")
+            xcol,ycol=st.columns(2)
+            with xcol: x=st.selectbox("X axis",profile.numeric_columns,key="scatter_x")
+            with ycol: y=st.selectbox("Y axis",[c for c in profile.numeric_columns if c!=x],key="scatter_y")
+            color_options=["None"]+profile.categorical_columns
+            color=st.selectbox("Color points by (optional)",color_options)
+            fig=px.scatter(data,x=x,y=y,color=None if color=="None" else color,trendline="ols",opacity=.72)
+            fig.update_layout(height=430,margin=dict(t=20,b=20,l=10,r=10),paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig,use_container_width=True)
+        else:
+            st.info("At least two numeric measures are needed to examine correlations and scatter relationships.")
+
+    with tabs[4]:
+        st.markdown("## Data quality & column intelligence")
+        q=profile.quality
+        q1,q2,q3,q4=st.columns(4)
+        q1.metric("Exact duplicate rows",f"{q['duplicate_rows']:,}")
+        q2.metric("Missing cells",f"{q['missing_cells']:,}")
+        q3.metric("Columns with one value",f"{len(q['constant_columns']):,}")
+        q4.metric("Complete cells",f"{data.notna().sum().sum():,}")
+        st.markdown("### Detected field roles")
+        st.dataframe(pd.DataFrame(profile.columns),use_container_width=True,hide_index=True)
+        st.markdown("### Missing values by column")
+        missing=data.isna().sum().sort_values(ascending=False)
+        missing=missing[missing>0]
+        if len(missing):
+            mdf=missing.rename("missing_rows").reset_index().rename(columns={"index":"column"})
+            fig=px.bar(mdf,x="missing_rows",y="column",orientation="h",color="missing_rows",color_continuous_scale=["#39c6c3","#7558f5"])
+            fig.update_layout(height=max(260,len(mdf)*34),coloraxis_showscale=False,margin=dict(t=10,b=10,l=10,r=10))
+            st.plotly_chart(fig,use_container_width=True)
+        else:
+            st.success("No missing values were detected.")
+        with st.expander("View duplicate records"):
+            duplicates=data[data.duplicated(keep=False)]
+            st.dataframe(duplicates,use_container_width=True,hide_index=True)
+        with st.expander("View all source rows"):
+            st.dataframe(data,use_container_width=True,hide_index=True)
+
+    with tabs[5]:
+        st.markdown("## Export your analysis")
+        csv=data.to_csv(index=False).encode("utf-8-sig")
+        profile_json=json.dumps({"dataset_kind":profile.dataset_kind,"quality":profile.quality,"columns":profile.columns,"insights":profile.insights},ensure_ascii=False,indent=2,default=str).encode("utf-8")
+        e1,e2=st.columns(2)
+        e1.download_button("↓ Analyzed dataset (CSV)",csv,"datapilot_analyzed_data.csv","text/csv",use_container_width=True)
+        e2.download_button("↓ Profile & findings (JSON)",profile_json,"datapilot_data_profile.json","application/json",use_container_width=True)
+        st.caption("Exports preserve the detected and converted data types where supported. Original source values are not overwritten in your uploaded file.")
+
+    # Specialized sales module remains available when the uploaded file has the full sales schema.
+    try:
+        sales_frame=load_sales_file(BytesIO(upload.getvalue()),upload.name)
+        sales=analyze_sales(sales_frame)
+        with st.expander("Open specialized sales analysis"):
+            ss=sales.summary
+            c=st.columns(5)
+            for col,label,val in zip(c,["Revenue","Gross profit","Gross margin","Orders","Average order value"],[ss["total_revenue"],ss["gross_profit"],ss["gross_margin_pct"],ss["order_count"],ss["average_order_value"]]):
+                col.metric(label,"—" if val is None else (f"{val:,.2f}%" if label=="Gross margin" else f"{val:,.2f}" if label!="Orders" else f"{val:,}"))
+            st.dataframe(sales.by_product,use_container_width=True,hide_index=True)
+            st.download_button("Download detailed sales report",build_html_report(sales).encode("utf-8"),"datapilot_sales_report.html","text/html")
+    except (ValueError, KeyError, TypeError):
+        pass
+
+    st.markdown("---")
+    st.caption("DataPilot AI · Adaptive analysis from your data · No fabricated causes, forecasts or currency assumptions")
