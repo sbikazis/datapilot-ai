@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from html import escape
 from io import BytesIO, StringIO
 import json
 import re
@@ -12,7 +13,7 @@ import streamlit as st
 
 from universal_engine import profile_dataset, grouped_summary, time_summary
 from visualizations import build_time_figure
-from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary
+from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -78,6 +79,23 @@ button[kind="primary"]{background:linear-gradient(110deg,#6250dc,#8a70ef)!import
 @media(max-width:900px){.block-container{padding:1rem 1rem 3rem}.hero{padding:22px}.hero h1{font-size:1.6rem!important}}
 </style>
 """, unsafe_allow_html=True)
+
+
+if st.session_state.theme_mode == "Dark":
+    st.markdown("""
+    <style>
+    .stApp{background:#101626;color:#e8ecf8}
+    h1,h2,h3,h4{color:#edf0ff!important}
+    .card,.insight,[data-testid="stMetric"],[data-testid="stPlotlyChart"],[data-testid="stExpander"],[data-testid="stDataFrame"]{background:#192238!important;border-color:#2c3854!important;color:#e8ecf8}
+    .card-title,.insight strong{color:#edf0ff!important}
+    .card-copy,.insight p,.subtle{color:#aab5ce!important}
+    .stTextInput input,.stSelectbox div[data-baseweb="select"],.stMultiSelect div[data-baseweb="select"]{background:#192238;color:#edf0ff}
+    [data-testid="stMetricValue"]{color:#edf0ff}
+    [data-testid="stMetricLabel"]{color:#aab5ce!important}
+    </style>
+    """, unsafe_allow_html=True)
+if st.session_state.density == "Compact":
+    st.markdown("<style>.block-container{padding-top:.8rem;padding-bottom:2rem}[data-testid='stMetric']{min-height:84px;padding:10px 13px}.card,.insight{padding:12px 14px;margin-bottom:7px}</style>", unsafe_allow_html=True)
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 def read_upload(upload, sheet_name=None):
@@ -327,6 +345,7 @@ profile.numeric_columns = numeric_cols
 profile.categorical_columns = category_cols
 profile.date_columns = date_cols
 profile.data = data
+profile.insights = build_evidence_findings(data, numeric_cols, category_cols, date_cols)
 recommendation, recommendation_reason = recommend_visualization(numeric_cols, category_cols, date_cols)
 
 # Global filters apply across every workspace page.
@@ -347,6 +366,8 @@ with st.sidebar.expander("Filter this dataset", expanded=False):
 st.sidebar.caption(f"{len(filtered):,} / {len(data):,} rows in current view")
 if st.sidebar.button("Clear all filters", use_container_width=True):
     st.session_state.active_filters = {}
+    for field in filterable:
+        st.session_state.pop(f"global_filter_{field}", None)
     st.rerun()
 
 # Common source context header
