@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from universal_engine import profile_dataset, grouped_summary, time_summary
+from time_intelligence import analyze_time_series
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
@@ -529,6 +530,23 @@ if upload is not None:
                 else:
                     fig = build_time_figure(trend)
                     st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
+
+                    # Evidence-led diagnostics: missing periods, broad shifts and abrupt changes.
+                    time_result = analyze_time_series(trend)
+                    t1, t2, t3 = st.columns(3)
+                    t1.metric("Valid periods", f"{time_result['valid_periods']:,}")
+                    t2.metric("Missing periods", "Not inferred" if time_result["missing_periods"] is None else f"{time_result['missing_periods']:,}")
+                    t3.metric("Comparison checks", "Ready" if time_result["eligible_for_comparison"] else "Limited sample")
+                    if time_result["findings"]:
+                        st.markdown("### What changed over time")
+                        for finding in time_result["findings"]:
+                            with st.container(border=True):
+                                st.caption(finding["kind"].upper())
+                                st.markdown(f"**{finding['title']}**")
+                                st.write(finding["detail"])
+                                st.caption("Next: " + finding["action"])
+                    else:
+                        st.info("No material time signal was detected by the current checks. This does not prove the series is stable.")
                     if len(trend) > 1:
                         first, last = float(trend.iloc[0]["value"]), float(trend.iloc[-1]["value"])
                         delta = last-first
