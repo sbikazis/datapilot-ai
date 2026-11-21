@@ -35,7 +35,7 @@ def _date_candidate(series: pd.Series, column: str) -> pd.Series | None:
         return pd.to_datetime(series, errors="coerce")
     name_hint = any(h in _name(column) for h in DATE_HINTS)
     text = series.astype("string").str.strip()
-    iso = text.str.match(r"^\\d{4}-\\d{1,2}-\\d{1,2}(?:[T\\s].*)?$", na=False)
+    iso = text.str.match(r"^\d{4}-\d{1,2}-\d{1,2}(?:[T\s].*)?$", na=False)
     if not name_hint and (not len(text) or iso.mean() < 0.85):
         return None
     parsed = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
@@ -54,12 +54,11 @@ def _parse_number(value: Any) -> float | None:
     if isinstance(value, (int, float)):
         number = float(value)
         return number if math.isfinite(number) else None
-    text = str(value).strip().replace("\\u00a0", "").replace(" ", "")
+    text = str(value).strip().replace("\u00a0", "").replace(" ", "")
     if not text:
         return None
-    # Keep only common numeric notation; reject malformed strings rather than guessing.
-    text = re.sub(r"[^0-9, .+\\-]", "", text).replace(" ", "")
-    if not text or not re.search(r"\\d", text):
+    text = re.sub(r"[^0-9, .+-]", "", text).replace(" ", "")
+    if not text or not re.search(r"\d", text):
         return None
     if "," in text and "." in text:
         if text.rfind(",") > text.rfind("."):
@@ -67,7 +66,6 @@ def _parse_number(value: Any) -> float | None:
         else:
             text = text.replace(",", "")
     elif "," in text:
-        # A single comma followed by exactly three digits is treated as a thousands separator.
         parts = text.split(",")
         if len(parts) == 2 and len(parts[1]) == 3 and parts[0].lstrip("+-").isdigit():
             text = "".join(parts)
