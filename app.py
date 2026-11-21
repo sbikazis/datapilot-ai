@@ -141,6 +141,12 @@ button[kind="primary"]:hover{background:#116b71!important}
 .hero-meta{margin-top:16px;color:#9db5c1;font-size:.66rem;font-weight:700;letter-spacing:.12em}
 .pagehead{padding:17px 19px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:18px}
 .pagehead h2{margin:0 0 4px}
+.dataset-summary{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:-5px 0 19px;padding:0 2px;color:#718191;font-size:.76rem}
+.dataset-summary>span{display:inline-flex;align-items:center;min-height:25px;padding:3px 8px;border:1px solid #e2e9ed;border-radius:5px;background:#fff}
+.dataset-summary .dataset-kind{color:#176f73;background:#edf6f5;border-color:#d8e9e7;font-weight:700}
+.dataset-summary .dataset-recommendation{border-color:transparent;background:transparent;padding-left:0}
+@media(max-width:700px){.workspace-topbar{align-items:flex-start;padding:13px}.workspace-session{display:none}.workspace-filename{font-size:1rem}.dataset-summary{gap:6px}.dataset-summary .dataset-recommendation{flex-basis:100%}}
+
 .kicker,.card-label{font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;color:#718191;font-weight:700}
 .subtle,.card-copy{color:#697789;font-size:.88rem}
 .card,.insight,.signal-card,.health-card,.domain-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;box-shadow:none}
@@ -219,6 +225,10 @@ if st.session_state.theme_mode == "Dark":
     .overview-live{background:#17352f!important;border-color:#285c50!important;color:#a5e4cf!important}
     .signal-meta span{background:#29354f!important;color:#c0c9df!important}
     .pagehead,.upload-panel,.upload-guidance,.signal-card{background:#192238!important;border-color:#2c3854!important}
+    .dataset-summary>span{background:#192238!important;border-color:#2c3854!important;color:#aab5ce!important}
+    .dataset-summary .dataset-kind{background:#17352f!important;border-color:#285c50!important;color:#a5e4cf!important}
+    .dataset-summary .dataset-recommendation{background:transparent!important;border-color:transparent!important}
+
     .upload-panel h2,.upload-guidance .card-label,.pagehead h2{color:#edf0ff!important}
     .upload-panel p,.upload-guidance .card-copy,.pagehead .subtle{color:#aab5ce!important}
     .format-list span{background:#29354f!important;color:#c0c9df!important;border-color:#3b4866!important}
@@ -610,8 +620,13 @@ if dataset_name is not None:
         domain_assessment["domain"], numeric_cols, category_cols, date_cols, limit=4
     )
 
-    # Common source context header
-    st.markdown(f'<div class="pagehead"><div><div class="kicker">{profile.dataset_kind} · DATASET PROFILE</div><h2 style="margin:3px 0">{escape(dataset_name)}</h2><div class="subtle">{len(data):,} rows · {len(data.columns):,} fields · recommended starting point: {recommendation}</div></div><span class="pill">LIVE SESSION</span></div>', unsafe_allow_html=True)
+    # Dataset context: compact metadata without repeating the filename in the top bar.
+    st.markdown(
+        f'<div class="dataset-summary"><span class="dataset-kind">{escape(str(profile.dataset_kind))}</span>'
+        f'<span>{len(data):,} rows</span><span>{len(data.columns):,} fields</span>'
+        f'<span class="dataset-recommendation">Suggested starting point: {escape(str(recommendation))}</span></div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Overview ───────────────────────────────────────────────────────────────
     if page == "Overview":
@@ -673,7 +688,7 @@ if dataset_name is not None:
                 if category_cols:
                     category_field = st.selectbox("Category snapshot", category_cols, key="overview_category_field")
                     category_data = category_summary(filtered[category_field], top_n=7).rename(columns={"category": category_field})
-                    fig = px.bar(category_data.sort_values("records"), x="records", y=category_field, orientation="h", color="records", color_continuous_scale=["#c9c2fb", "#7664e8"])
+                    fig = px.bar(category_data.sort_values("records"), x="records", y=category_field, orientation="h", color="records", color_continuous_scale=["#c9c2fb", "#167d83"])
                     fig.update_layout(height=300, margin=dict(t=15,b=15,l=8,r=8), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
                     st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, key="overview_category_chart")
                     st.caption(f"Top categories by record count · {category_field}")
@@ -685,7 +700,7 @@ if dataset_name is not None:
                     measure_values = pd.to_numeric(filtered[measure_field], errors="coerce").replace([float("inf"), float("-inf")], pd.NA).dropna()
                     if len(measure_values):
                         measure_frame = pd.DataFrame({measure_field: measure_values})
-                        fig = px.histogram(measure_frame, x=measure_field, nbins=24, color_discrete_sequence=["#21b8b2"])
+                        fig = px.histogram(measure_frame, x=measure_field, nbins=24, color_discrete_sequence=["#4f7894"])
                         fig.update_layout(height=300, margin=dict(t=15,b=15,l=8,r=8), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                         st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, key="overview_measure_chart")
                         st.caption(f"Observed distribution · {len(measure_values):,} valid values")
@@ -805,7 +820,7 @@ if dataset_name is not None:
                 table = result["table"]
                 if not table.empty:
                     if selected_objective == "compare_groups":
-                        fig = px.bar(table, x="group", y="median", color="median", color_continuous_scale=["#c7c0fb", "#6955e8", "#21b8b2"], labels={"median": "Median", "group": dimension})
+                        fig = px.bar(table, x="group", y="median", color="median", color_continuous_scale=["#c9dfdc", "#167d83", "#4f7894"], labels={"median": "Median", "group": dimension})
                         fig.update_layout(height=360, margin=dict(t=20, b=20, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
                         st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
                     elif selected_objective == "time_movement":
@@ -909,9 +924,9 @@ if dataset_name is not None:
                 else:
                     chart = st.selectbox("Chart style", ["Horizontal bars","Vertical bars","Treemap","Box plot"], key="cmp_chart")
                     if chart == "Horizontal bars":
-                        fig = px.bar(summary.sort_values("value"), x="value", y=dimension, orientation="h", color="value", color_continuous_scale=["#c7c0fb","#6955e8","#21b8b2"])
+                        fig = px.bar(summary.sort_values("value"), x="value", y=dimension, orientation="h", color="value", color_continuous_scale=["#c9dfdc","#167d83","#4f7894"])
                     elif chart == "Vertical bars":
-                        fig = px.bar(summary, x=dimension, y="value", color="value", color_continuous_scale=["#c7c0fb","#6955e8","#21b8b2"])
+                        fig = px.bar(summary, x=dimension, y="value", color="value", color_continuous_scale=["#c9dfdc","#167d83","#4f7894"])
                     elif chart == "Treemap":
                         fig = px.treemap(summary, path=[dimension], values="value", color="value", color_continuous_scale="Tealgrn")
                     else:
@@ -1012,11 +1027,11 @@ if dataset_name is not None:
                 measure = st.selectbox("Measure", numeric_cols, key="dist_field")
                 chart = st.selectbox("Distribution view", ["Histogram + box","Violin","ECDF"])
                 if chart == "Histogram + box":
-                    fig = px.histogram(filtered, x=measure, marginal="box", nbins=40, color_discrete_sequence=["#6955e8"])
+                    fig = px.histogram(filtered, x=measure, marginal="box", nbins=40, color_discrete_sequence=["#167d83"])
                 elif chart == "Violin":
-                    fig = px.violin(filtered, y=measure, box=True, points="outliers", color_discrete_sequence=["#21b8b2"])
+                    fig = px.violin(filtered, y=measure, box=True, points="outliers", color_discrete_sequence=["#4f7894"])
                 else:
-                    fig = px.ecdf(filtered, x=measure, color_discrete_sequence=["#6955e8"])
+                    fig = px.ecdf(filtered, x=measure, color_discrete_sequence=["#167d83"])
                 fig.update_layout(height=430, margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
                 s = pd.to_numeric(filtered[measure], errors="coerce").dropna()
@@ -1042,7 +1057,7 @@ if dataset_name is not None:
                 if color != "None":
                     fig = px.scatter(plot_data, x=x, y=y, color=color, opacity=.75)
                 else:
-                    fig = px.scatter(plot_data, x=x, y=y, opacity=.75, color_discrete_sequence=["#6955e8"])
+                    fig = px.scatter(plot_data, x=x, y=y, opacity=.75, color_discrete_sequence=["#167d83"])
                 fig.update_traces(marker={"size":9,"line":{"width":1,"color":"white"}})
                 fig.update_layout(height=450, hovermode="closest", margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                 plot_data = plot_data.reset_index(drop=True)
@@ -1071,7 +1086,7 @@ if dataset_name is not None:
                 elif chart == "Treemap":
                     fig = px.treemap(counts, path=[dim], values="records", color="records", color_continuous_scale="Tealgrn")
                 else:
-                    fig = px.bar(counts.sort_values("records"), x="records", y=dim, orientation="h", color="records", color_continuous_scale=["#c7c0fb","#6955e8"])
+                    fig = px.bar(counts.sort_values("records"), x="records", y=dim, orientation="h", color="records", color_continuous_scale=["#c9dfdc","#167d83"])
                 fig.update_layout(height=430, margin=dict(t=20,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
                 event = st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, on_select="rerun", selection_mode="points", key="category_composition_chart")
                 fields = ["label"] if chart in ["Donut","Treemap"] else ["y"]
@@ -1121,7 +1136,7 @@ if dataset_name is not None:
             if not numeric_values.empty:
                 spotlight_fig = px.histogram(
                     x=numeric_values, nbins=36,
-                    color_discrete_sequence=["#7664e8"],
+                    color_discrete_sequence=["#167d83"],
                     labels={"x": spotlight_field, "count": "Records"},
                 )
                 spotlight_fig.update_traces(marker_line_width=0, opacity=.88)
@@ -1132,13 +1147,13 @@ if dataset_name is not None:
             date_values = pd.to_datetime(spotlight, errors="coerce").dropna()
             if not date_values.empty:
                 date_counts = date_values.dt.to_period("M").astype(str).value_counts().sort_index().rename_axis("Period").reset_index(name="Records")
-                spotlight_fig = px.area(date_counts, x="Period", y="Records", markers=True, color_discrete_sequence=["#36bfc9"])
+                spotlight_fig = px.area(date_counts, x="Period", y="Records", markers=True, color_discrete_sequence=["#4f7894"])
                 spotlight_fig.update_layout(height=310, margin=dict(t=20,b=24,l=12,r=12))
                 st.plotly_chart(spotlight_fig, use_container_width=True, config={"displaylogo":False})
         else:
             counts = spotlight.astype("string").fillna("(Missing)").value_counts().head(14).rename_axis("Value").reset_index(name="Records")
             if not counts.empty:
-                spotlight_fig = px.bar(counts.sort_values("Records"), x="Records", y="Value", orientation="h", color="Records", color_continuous_scale=["#c7c0fb","#7664e8","#36bfc9"])
+                spotlight_fig = px.bar(counts.sort_values("Records"), x="Records", y="Value", orientation="h", color="Records", color_continuous_scale=["#c9dfdc","#167d83","#4f7894"])
                 spotlight_fig.update_layout(height=max(280, len(counts)*27), margin=dict(t=20,b=20,l=12,r=12), coloraxis_showscale=False)
                 st.plotly_chart(spotlight_fig, use_container_width=True, config={"displaylogo":False})
         with st.expander("Inspect source rows for this field"):
@@ -1159,7 +1174,7 @@ if dataset_name is not None:
         missing = missing[missing > 0]
         if len(missing):
             mdf = missing.rename("Missing %").reset_index().rename(columns={"index":"Field"})
-            fig = px.bar(mdf, x="Missing %", y="Field", orientation="h", color="Missing %", color_continuous_scale=["#36bfc9","#7664e8","#e5ae52"])
+            fig = px.bar(mdf, x="Missing %", y="Field", orientation="h", color="Missing %", color_continuous_scale=["#4f7894","#167d83","#e5ae52"])
             fig.update_layout(height=max(260,len(mdf)*34), margin=dict(t=10,b=10,l=10,r=10), coloraxis_showscale=False)
             event = st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, on_select="rerun", selection_mode="points", key="explorer_missingness_chart")
             selected_fields = selected_point_values(event, ["y"])
