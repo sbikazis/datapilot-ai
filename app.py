@@ -53,6 +53,13 @@ def reset_workspace_preferences():
         st.session_state[key] = value.copy() if isinstance(value, dict) else value
 
 
+def go_to_page(page, mode=None):
+    st.session_state["nav_page"] = page
+    if mode:
+        st.session_state["chart_type"] = mode
+        st.session_state.pop("studio_mode", None)
+
+
 def apply_analysis_defaults():
     st.session_state.pop("studio_mode", None)
     st.session_state.pop("cmp_limit", None)
@@ -165,9 +172,14 @@ if st.session_state.theme_mode == "Dark":
     <style>
     .stApp{background:#101626;color:#e8ecf8}
     h1,h2,h3,h4{color:#edf0ff!important}
-    .card,.insight,[data-testid="stMetric"],[data-testid="stPlotlyChart"],[data-testid="stExpander"],[data-testid="stDataFrame"]{background:#192238!important;border-color:#2c3854!important;color:#e8ecf8}
-    .card-title,.insight strong{color:#edf0ff!important}
-    .card-copy,.insight p,.subtle{color:#aab5ce!important}
+    .card,.insight,.signal-card,.health-card,.domain-card,[data-testid="stMetric"],[data-testid="stPlotlyChart"],[data-testid="stExpander"],[data-testid="stDataFrame"]{background:#192238!important;border-color:#2c3854!important;color:#e8ecf8}
+    .card-title,.insight strong,.signal-title,.health-heading strong,.health-row strong,.health-row b,.loaded-dataset strong{color:#edf0ff!important}
+    .card-copy,.insight p,.signal-card p,.health-row span,.health-foot,.subtle{color:#aab5ce!important}
+    .next-step{background:#202a43!important;border-color:#374360!important}
+    .next-step strong{color:#edf0ff!important}
+    .health-track{background:#303b55!important}
+    .loaded-dataset{background:#192238!important;border-color:#2c5b51!important}
+    .overview-live{background:#17352f!important;border-color:#285c50!important;color:#a5e4cf!important}
     .stTextInput input,.stSelectbox div[data-baseweb="select"],.stMultiSelect div[data-baseweb="select"]{background:#192238;color:#edf0ff}
     [data-testid="stMetricValue"]{color:#edf0ff}
     [data-testid="stMetricLabel"]{color:#aab5ce!important}
@@ -554,15 +566,10 @@ if upload is not None:
                         f'<div class="signal-card"><div class="signal-top"><span class="signal-index">{index:02d}</span><span class="signal-kind">{kind}</span></div><div class="signal-title">{title}</div><p>{detail}</p><div class="signal-next">INVESTIGATE NEXT · {action}</div></div>',
                         unsafe_allow_html=True,
                     )
-                if st.button("Investigate these signals", type="primary", key="overview_investigate_signals"):
-                    st.session_state["nav_page"] = "Analysis Studio"
-                    st.session_state.pop("studio_mode", None)
-                    st.rerun()
+                st.button("Investigate these signals", type="primary", key="overview_investigate_signals", on_click=go_to_page, args=("Analysis Studio",))
             else:
                 st.markdown('<div class="empty"><strong>No strong automatic signals yet.</strong><p>That is not a problem. Start with a field or data-quality review, then choose a question in Analysis Studio.</p></div>', unsafe_allow_html=True)
-                if st.button("Open Analysis Studio", type="primary", key="overview_empty_studio"):
-                    st.session_state["nav_page"] = "Analysis Studio"
-                    st.rerun()
+                st.button("Open Analysis Studio", type="primary", key="overview_empty_studio", on_click=go_to_page, args=("Analysis Studio",))
 
             st.markdown("### Explore the shape of your data")
             chart_left, chart_right = st.columns(2, gap="medium")
@@ -622,10 +629,7 @@ if upload is not None:
             if available_templates:
                 for template in available_templates[:3]:
                     st.markdown(f'<div class="next-step"><strong>{escape(str(template["title"]))}</strong><p>{escape(str(template["question"]))}</p><span>Fields: {escape(", ".join(template["required_fields"]) or "Review schema")}</span></div>', unsafe_allow_html=True)
-                if st.button("Build an analysis", type="primary", use_container_width=True, key="overview_build_analysis"):
-                    st.session_state["nav_page"] = "Analysis Studio"
-                    st.session_state.pop("studio_mode", None)
-                    st.rerun()
+                st.button("Build an analysis", type="primary", use_container_width=True, key="overview_build_analysis", on_click=go_to_page, args=("Analysis Studio",))
             else:
                 st.info("Review detected field roles to unlock a suitable starting analysis.")
 
@@ -634,15 +638,11 @@ if upload is not None:
         with footer_left:
             st.markdown("**Need the exact source records?**")
             st.caption("Open Data Explorer to search rows, review field roles and trace values back to the uploaded file.")
-            if st.button("Open Data Explorer", key="overview_open_explorer"):
-                st.session_state["nav_page"] = "Data Explorer"
-                st.rerun()
+            st.button("Open Data Explorer", key="overview_open_explorer", on_click=go_to_page, args=("Data Explorer",))
         with footer_right:
             st.markdown("**Ready to share what you found?**")
             st.caption("Create a portable report from the current data and filter state. HTML, Excel and JSON exports are available.")
-            if st.button("Create a report", key="overview_open_reports"):
-                st.session_state["nav_page"] = "Reports"
-                st.rerun()
+            st.button("Create a report", key="overview_open_reports", on_click=go_to_page, args=("Reports",))
 
         st.caption("All observations are computed from the uploaded dataset and active filters. Statistical patterns do not establish causes, forecasts or business outcomes.")
  
