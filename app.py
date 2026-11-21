@@ -24,6 +24,7 @@ from studio_logic import recommend_visualization, numeric_summary, safe_correlat
 from semantic_engine import infer_semantic_fields
 from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
+from navigation_state import activate_sample_workspace
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -75,8 +76,7 @@ def apply_analysis_defaults():
 
 def start_sample_dataset():
     """Set navigation and sample state before Streamlit rebuilds keyed widgets."""
-    st.session_state["use_sample_dataset"] = True
-    st.session_state["nav_page"] = "Overview"
+    activate_sample_workspace(st.session_state)
 
 
 
