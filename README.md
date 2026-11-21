@@ -55,3 +55,8 @@ streamlit run app.py
 ## Product direction
 
 The next release priorities are deployment verification, accessibility review, broader file diagnostics and commercial readiness. Optional generative AI must remain opt-in, evidence-grounded and privacy-transparent.
+
+
+## Transparent file intake
+
+DataPilot reports the detected file format, text encoding and delimiter (or selected Excel worksheet), row/column counts, exact duplicate rows, empty columns, and structural warnings. A read-only source preview is available before deeper analysis. Nested JSON normalization is disclosed. Delimited files with inconsistent row widths are rejected with an actionable error rather than silently dropping malformed records. Intake diagnostics do not automatically repair or rewrite uploaded values; uploads remain session-local.
