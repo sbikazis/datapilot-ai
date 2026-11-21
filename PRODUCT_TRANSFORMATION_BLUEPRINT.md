@@ -166,3 +166,8 @@ The welcome screen now offers a reproducible synthetic order dataset that enters
 A dedicated integration suite now exercises the synthetic first-run dataset through schema profiling, adaptive domain classification, supported guided objectives, group comparison, time movement, evidence ranking, decision action planning, HTML report rendering and the complete nine-sheet Excel workbook. It also checks that source-row references remain available, action guardrails remain explicit, sample data is reproducible and labeled fictional, and tiny samples produce a limited result instead of a misleading group comparison.
 
 This validates the shared analysis pipeline independently of the Streamlit presentation layer. It is not a browser-based UI automation test and does not verify the hosted Streamlit deployment; those remain separate release checks.
+
+
+## Visual identity system — domain-aware experience
+
+The interface now supports five complete visual directions rather than a single accent-color swap: Nebula / sci-fi, Heritage / archive, Botanical / nature, Executive / minimal and Oceanic / research. Automatic mode maps the detected dataset domain to a visual direction; a user can lock any direction manually. Each direction defines separate light and dark semantic tokens for canvas, surfaces, text, muted text, borders, accents, sidebar and hero treatment. Responsive layouts, keyboard focus, reduced-motion support, consistent form controls and Plotly palettes are included. Theme choice affects presentation only and never changes calculations or source data.
