@@ -50,3 +50,28 @@ def test_category_summary_includes_denominator_and_missing_bucket():
 def test_category_summary_rejects_invalid_top_n():
     with pytest.raises(ValueError):
         category_summary(pd.Series(["A"]), top_n=0)
+
+
+
+def test_evidence_findings_include_denominators_and_caveats():
+    from studio_logic import build_evidence_findings
+
+    frame = pd.DataFrame({
+        "segment": ["A"] * 8 + ["B"] * 2,
+        "revenue": [10, 11, 12, 13, 14, 15, 16, 100, 9, 8],
+        "cost": [5, 5.5, 6, 6.5, 7, 7.5, 8, 50, 4.5, 4],
+        "date": pd.date_range("2026-01-01", periods=10),
+    })
+    findings = build_evidence_findings(frame, ["revenue", "cost"], ["segment"], ["date"])
+    assert findings
+    assert any("observations" in item["detail"] for item in findings)
+    assert any("causality" in item["detail"] for item in findings if item["kind"] == "relationship")
+
+
+def test_evidence_findings_are_empty_for_empty_roles_and_validate_limit():
+    from studio_logic import build_evidence_findings
+
+    frame = pd.DataFrame({"label": ["a", "b"]})
+    assert build_evidence_findings(frame, [], [], []) == []
+    with pytest.raises(ValueError):
+        build_evidence_findings(frame, [], [], [], limit=0)
