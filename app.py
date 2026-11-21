@@ -14,7 +14,7 @@ import streamlit as st
 
 from universal_engine import profile_dataset, grouped_summary, time_summary
 from visualizations import build_time_figure
-from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter
+from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -465,7 +465,17 @@ if upload is not None:
                     else:
                         fig = px.box(filtered, x=dimension, y=measure, points="outliers")
                     fig.update_layout(height=440, margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
-                    st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
+                    event = st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True}, on_select="rerun", selection_mode="points", key="group_comparison_chart")
+                    label_fields = {"Horizontal bars": ["y"], "Vertical bars": ["x"], "Treemap": ["label"], "Box plot": ["x"]}[chart]
+                    selected_groups = selected_point_values(event, label_fields)
+                    if selected_groups:
+                        drilldown = filtered[filtered[dimension].astype(str).isin(selected_groups)]
+                        st.markdown("### Selected groups · source records")
+                        st.caption(f"{len(drilldown):,} source rows from: {', '.join(selected_groups)}")
+                        st.dataframe(drilldown.head(500), use_container_width=True, hide_index=True)
+                        st.download_button("Download selected source rows", drilldown.to_csv(index=False).encode("utf-8-sig"), "datapilot_selected_groups.csv", "text/csv", key="download_selected_groups")
+                    else:
+                        st.caption("Select one or more marks in the chart to inspect their exact source records.")
                     top = summary.iloc[0]
                     total = summary["value"].sum()
                     share = float(top["value"] / total * 100) if total and agg == "sum" else None
@@ -537,7 +547,16 @@ if upload is not None:
                     fig = px.scatter(plot_data, x=x, y=y, opacity=.75, color_discrete_sequence=["#6955e8"])
                 fig.update_traces(marker={"size":9,"line":{"width":1,"color":"white"}})
                 fig.update_layout(height=450, hovermode="closest", margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
+                plot_data = plot_data.reset_index(drop=True)
+                event = st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True}, on_select="rerun", selection_mode="points", key="relationship_scatter_chart")
+                selected_indices = [i for i in selected_point_indices(event) if i < len(plot_data)]
+                if selected_indices:
+                    selected_rows = plot_data.iloc[selected_indices]
+                    st.markdown("### Selected points · source records")
+                    st.dataframe(selected_rows, use_container_width=True, hide_index=True)
+                    st.download_button("Download selected points", selected_rows.to_csv(index=False).encode("utf-8-sig"), "datapilot_selected_points.csv", "text/csv", key="download_selected_points")
+                else:
+                    st.caption("Select scatter points to inspect the matching source rows.")
                 corr, n = safe_correlation(plot_data, x, y)
                 if corr is not None:
                     st.metric("Pearson correlation", f"{corr:.3f}", f"{n:,} paired observations")
@@ -556,7 +575,17 @@ if upload is not None:
                 else:
                     fig = px.bar(counts.sort_values("records"), x="records", y=dim, orientation="h", color="records", color_continuous_scale=["#c7c0fb","#6955e8"])
                 fig.update_layout(height=430, margin=dict(t=20,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
-                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
+                event = st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, on_select="rerun", selection_mode="points", key="category_composition_chart")
+                fields = ["label"] if chart in ["Donut","Treemap"] else ["y"]
+                selected_categories = selected_point_values(event, fields)
+                if selected_categories:
+                    selected_rows = filtered[filtered[dim].astype(str).isin(selected_categories)]
+                    st.markdown("### Selected categories · source records")
+                    st.caption(f"{len(selected_rows):,} matching source rows")
+                    st.dataframe(selected_rows.head(500), use_container_width=True, hide_index=True)
+                    st.download_button("Download selected category rows", selected_rows.to_csv(index=False).encode("utf-8-sig"), "datapilot_selected_categories.csv", "text/csv", key="download_selected_categories")
+                else:
+                    st.caption("Select a chart segment to drill into its source records.")
                 st.dataframe(counts, use_container_width=True, hide_index=True)
             else:
                 st.info("No category or identifier fields are available.")

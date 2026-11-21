@@ -85,3 +85,27 @@ def test_detect_delimiter_supports_common_exports_and_safe_fallback():
     assert detect_delimiter("a\tb\tc\n1\t2\t3\n") == "\t"
     assert detect_delimiter("a,b,c\n1,2,3\n") == ","
     assert detect_delimiter("") == ","
+
+
+
+def test_selected_point_values_supports_plotly_selection_payloads():
+    from studio_logic import selected_point_values
+
+    event = {"selection": {"points": [
+        {"x": "North", "y": 120},
+        {"x": "South", "y": 90},
+        {"x": "North", "y": 120},
+        {"label": "West"},
+    ]}}
+    assert selected_point_values(event, ["label", "x"]) == ["North", "South", "West"]
+    assert selected_point_values(None, ["x"]) == []
+
+
+def test_selected_point_indices_extracts_unique_valid_rows():
+    from studio_logic import selected_point_indices
+
+    event = {"selection": {"points": [
+        {"point_index": 4}, {"point_number": 2}, {"point_index": 4},
+        {"point_index": -1}, {"point_index": "bad"}, {},
+    ]}}
+    assert selected_point_indices(event) == [4, 2]

@@ -11,6 +11,7 @@
 - Global category filters applied across overview findings, analysis views, exploration and reports.
 - Adaptive analysis recommendations, descriptive statistics, IQR outlier review, category concentration, date coverage and evidence-backed relationship findings.
 - Interactive group comparisons, time trends, distributions, scatter plots, category composition and source-row exploration.
+- Select marks in comparison, composition and scatter charts to drill into the exact matching source records, preview up to 500 rows and export the selection.
 - HTML executive report, multi-sheet XLSX workbook, CSV extracts and JSON analysis profile.
 - A reusable statistical layer with deterministic tests for recommendations, summaries, correlations, category shares and insight evidence.
 

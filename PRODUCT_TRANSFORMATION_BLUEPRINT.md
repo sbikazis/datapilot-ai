@@ -94,3 +94,10 @@ The first UX foundation release implements:
 - Reusable tested statistical helpers for numeric distributions, category shares, correlations and evidence findings.
 
 This is a foundation, not completion of the full transformation. Remaining high-value work includes true chart-to-table cross-filtering, richer semantic typing (currency-like values, percentages, coordinates, durations), robust large-file sampling and diagnostics, multi-level JSON support, polished PDF output, accessibility and deployment verification. Authentication, persistent projects, shared teams and external AI remain explicitly out of scope until secure storage, privacy and cost architecture are implemented.
+
+
+## Implementation checkpoint — Chart selection and source drill-down
+
+The follow-up interaction layer adds Plotly point selection to group comparisons, category composition and numeric relationship charts. Selected categories/points are resolved back to the filtered source dataframe, displayed as records and offered as CSV exports. Selection parsing is isolated in tested helpers to handle missing, duplicate and malformed event fields safely.
+
+Remaining work: coordinated cross-filter state across multiple charts, time-window brush selection, advanced semantic roles and robust large-file workflows.
