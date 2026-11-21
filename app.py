@@ -1,5 +1,5 @@
 import streamlit as st
-from datapilot.engine import analyze_sales, build_html_report, load_sales_file
+from engine import analyze_sales, build_html_report, load_sales_file
 
 st.set_page_config(page_title="DataPilot AI", page_icon="📊", layout="wide")
 st.title("📊 DataPilot AI")
