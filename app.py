@@ -593,7 +593,8 @@ if upload is not None:
                     measure_field = st.selectbox("Measure snapshot", numeric_cols, key="overview_measure_field")
                     measure_values = pd.to_numeric(filtered[measure_field], errors="coerce").replace([float("inf"), float("-inf")], pd.NA).dropna()
                     if len(measure_values):
-                        fig = px.histogram(measure_values, x=measure_field, nbins=24, color_discrete_sequence=["#21b8b2"])
+                        measure_frame = pd.DataFrame({measure_field: measure_values})
+                        fig = px.histogram(measure_frame, x=measure_field, nbins=24, color_discrete_sequence=["#21b8b2"])
                         fig.update_layout(height=300, margin=dict(t=15,b=15,l=8,r=8), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                         st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, key="overview_measure_chart")
                         st.caption(f"Observed distribution · {len(measure_values):,} valid values")
