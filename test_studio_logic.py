@@ -75,3 +75,13 @@ def test_evidence_findings_are_empty_for_empty_roles_and_validate_limit():
     assert build_evidence_findings(frame, [], [], []) == []
     with pytest.raises(ValueError):
         build_evidence_findings(frame, [], [], [], limit=0)
+
+
+
+def test_detect_delimiter_supports_common_exports_and_safe_fallback():
+    from studio_logic import detect_delimiter
+
+    assert detect_delimiter("a;b;c\n1;2;3\n") == ";"
+    assert detect_delimiter("a\tb\tc\n1\t2\t3\n") == "\t"
+    assert detect_delimiter("a,b,c\n1,2,3\n") == ","
+    assert detect_delimiter("") == ","
