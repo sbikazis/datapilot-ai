@@ -5,7 +5,8 @@
 ## Current capabilities
 
 - A dedicated workspace with Overview, Analysis Studio, Data Explorer, Reports and Settings.
-- Configurable workspace name, mark/initials, accent palette, light/dark appearance and compact/comfortable density (session-local).
+- Configurable workspace name, subtitle, uploaded logo or initials, accent palette, light/dark appearance and compact/comfortable density (session-local).
+- Functional analysis defaults for starting view, Top N, numeric precision and report methodology notes.
 - CSV, TSV, XLSX, XLS and JSON table ingestion, including worksheet selection for Excel workbooks.
 - Automatic field profiling for measures, categories, identifiers and dates, with a reviewable field-role override.
 - Conservative semantic hints for percentages, currency-like amounts (without guessing the currency), durations, coordinates, booleans, URLs and personal-data identifiers such as email/phone.
