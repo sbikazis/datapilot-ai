@@ -34,45 +34,69 @@ def _date_candidate(series: pd.Series, column: str) -> pd.Series | None:
     if pd.api.types.is_datetime64_any_dtype(series):
         return pd.to_datetime(series, errors="coerce")
     name_hint = any(h in _name(column) for h in DATE_HINTS)
-    if not name_hint and not (series.dtype == "object" or str(series.dtype).startswith("string")):
-        return None
     text = series.astype("string").str.strip()
-    iso = text.str.match(r"^\d{4}-\d{1,2}-\d{1,2}(?:[T\s].*)?$", na=False)
+    iso = text.str.match(r"^\\d{4}-\\d{1,2}-\\d{1,2}(?:[T\\s].*)?$", na=False)
+    if not name_hint and (not len(text) or iso.mean() < 0.85):
+        return None
     parsed = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
     if iso.any():
         parsed.loc[iso] = pd.to_datetime(text.loc[iso], errors="coerce", format="mixed")
     rest = ~iso
-    if rest.any():
+    if name_hint and rest.any():
         parsed.loc[rest] = pd.to_datetime(text.loc[rest], errors="coerce", dayfirst=True, format="mixed")
     ratio = parsed.notna().mean() if len(parsed) else 0
     return parsed if ratio >= (0.65 if name_hint else 0.85) else None
 
 
+def _parse_number(value: Any) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+    if isinstance(value, (int, float)):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    text = str(value).strip().replace("\\u00a0", "").replace(" ", "")
+    if not text:
+        return None
+    # Keep only common numeric notation; reject malformed strings rather than guessing.
+    text = re.sub(r"[^0-9, .+\\-]", "", text).replace(" ", "")
+    if not text or not re.search(r"\\d", text):
+        return None
+    if "," in text and "." in text:
+        if text.rfind(",") > text.rfind("."):
+            text = text.replace(".", "").replace(",", ".")
+        else:
+            text = text.replace(",", "")
+    elif "," in text:
+        # A single comma followed by exactly three digits is treated as a thousands separator.
+        parts = text.split(",")
+        if len(parts) == 2 and len(parts[1]) == 3 and parts[0].lstrip("+-").isdigit():
+            text = "".join(parts)
+        elif len(parts) > 2 and all(len(part) == 3 for part in parts[1:]):
+            text = "".join(parts)
+        else:
+            text = text.replace(",", ".")
+    if text.count(".") > 1:
+        return None
+    try:
+        number = float(text)
+    except ValueError:
+        return None
+    return number if math.isfinite(number) else None
+
+
 def _numeric_candidate(series: pd.Series, column: str) -> pd.Series | None:
     if pd.api.types.is_numeric_dtype(series):
         values = pd.to_numeric(series, errors="coerce")
-        return values if values.notna().mean() >= 0.8 else None
-    if not (series.dtype == "object" or str(series.dtype).startswith("string")):
-        return None
-    text = series.astype("string").str.strip().str.replace("\u00a0", "", regex=False).str.replace(" ", "", regex=False)
-    both = text.str.contains(",", na=False) & text.str.contains(r"\.", na=False)
-    comma_decimal = both & (text.str.rfind(",") > text.str.rfind("."))
-    text.loc[comma_decimal] = text.loc[comma_decimal].str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
-    dot_decimal = both & ~comma_decimal
-    text.loc[dot_decimal] = text.loc[dot_decimal].str.replace(",", "", regex=False)
-    only_comma = text.str.contains(",", na=False) & ~text.str.contains(r"\.", na=False)
-    text.loc[only_comma] = text.loc[only_comma].str.replace(",", ".", regex=False)
-    cleaned = text.str.replace(r"[^0-9.\-+]", "", regex=True)
-    values = pd.to_numeric(cleaned, errors="coerce")
+        finite = values.map(lambda x: math.isfinite(float(x)) if pd.notna(x) else False)
+        values = values.where(finite)
+    else:
+        if not (series.dtype == "object" or str(series.dtype).startswith("string")):
+            return None
+        values = series.map(_parse_number).astype("Float64")
     ratio = values.notna().mean() if len(values) else 0
     hint = any(h in _name(column) for h in MEASURE_HINTS)
     threshold = 0.65 if hint else 0.9
-    if ratio < threshold:
-        return None
-    finite = values.map(lambda x: math.isfinite(float(x)) if pd.notna(x) else False)
-    values = values.where(finite)
-    return values
-
+    return values if ratio >= threshold else None
 
 def _safe_top(series: pd.Series) -> tuple[str, int] | None:
     counts = series.dropna().astype(str).value_counts()
