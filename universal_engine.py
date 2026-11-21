@@ -88,7 +88,10 @@ def _numeric_candidate(series: pd.Series, column: str) -> pd.Series | None:
         finite = values.map(lambda x: math.isfinite(float(x)) if pd.notna(x) else False)
         values = values.where(finite)
     else:
-        if not (series.dtype == "object" or str(series.dtype).startswith("string")):
+        # pandas 3.x may infer plain text columns as dtype "str", not "object".
+        # Use pandas' dtype predicate so locale-formatted numeric strings are profiled
+        # consistently across pandas versions.
+        if not pd.api.types.is_string_dtype(series.dtype) and series.dtype != "object":
             return None
         values = series.map(_parse_number).astype("Float64")
     ratio = values.notna().mean() if len(values) else 0
