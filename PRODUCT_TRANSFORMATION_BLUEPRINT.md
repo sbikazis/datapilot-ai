@@ -81,3 +81,16 @@ A release is not complete because the app imports or displays a few KPIs. Each r
 - Do not claim universal support for arbitrary files without limits and diagnostics.
 - Do not fabricate data, business context, currency, causality, or forecasts.
 - Do not expose account, team, cloud storage, or payment features as available before implemented and secured.
+
+
+## Implementation checkpoint — Professional Studio foundation
+
+The first UX foundation release implements:
+- A named application workspace with dedicated Overview, Analysis Studio, Data Explorer, Reports and Settings destinations.
+- Session-local workspace naming, mark/initials, accent palette, light/dark theme and density controls.
+- Excel worksheet selection, global category filters, field-role review and overrides.
+- Adaptive recommendations and evidence-backed findings recalculated against the active filter.
+- Interactive chart choices, descriptive statistics, source-row exploration and HTML/XLSX/CSV/JSON outputs.
+- Reusable tested statistical helpers for numeric distributions, category shares, correlations and evidence findings.
+
+This is a foundation, not completion of the full transformation. Remaining high-value work includes true chart-to-table cross-filtering, richer semantic typing (currency-like values, percentages, coordinates, durations), robust large-file sampling and diagnostics, multi-level JSON support, polished PDF output, accessibility and deployment verification. Authentication, persistent projects, shared teams and external AI remain explicitly out of scope until secure storage, privacy and cost architecture are implemented.
