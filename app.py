@@ -127,6 +127,27 @@ if upload:
             fig.update_layout(coloraxis_showscale=False, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=330, xaxis_title="Gross profit", yaxis_title="", font=dict(family="DM Sans",color="#38285b"))
             st.plotly_chart(fig, use_container_width=True)
         st.markdown('<div class="insight"><b>Read the numbers in context.</b> Revenue is not the same as profit. Compare both before deciding which products deserve more attention.</div>', unsafe_allow_html=True)
+
+        st.markdown("### ✦ DataPilot intelligence brief")
+        top_product = result.by_product.iloc[0]
+        top_category = result.by_category.iloc[0]
+        insight_cols = st.columns(3)
+        with insight_cols[0]:
+            st.markdown("**Revenue leader**")
+            st.write(f"{top_product['product']} leads with {top_product['revenue']:,.2f} in recorded revenue.")
+        with insight_cols[1]:
+            st.markdown("**Category leader**")
+            st.write(f"{top_category['category']} is the largest category at {top_category['revenue']:,.2f} revenue.")
+        with insight_cols[2]:
+            st.markdown("**Profit watch**")
+            loss_products = result.by_product[result.by_product["gross_profit"] < 0]
+            if not loss_products.empty:
+                st.write(f"{len(loss_products)} product(s) have negative gross profit. Review their pricing and recorded unit costs.")
+            elif s["gross_margin_pct"] is not None and s["gross_margin_pct"] < 15:
+                st.write("Overall gross margin is below 15%. Review pricing and unit costs.")
+            else:
+                st.write("No product-level gross losses detected in the accepted rows.")
+        st.caption("These are transparent, data-derived signals — not forecasts or claims about causes. A connected generative AI analyst is a separate capability and is not enabled in this version.")
     
     with tab_products:
         st.markdown("### Product performance")
