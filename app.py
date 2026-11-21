@@ -66,6 +66,33 @@ def apply_analysis_defaults():
     st.session_state.pop("studio_mode", None)
     st.session_state.pop("cmp_limit", None)
 
+
+
+def investigate_signal(item):
+    """Carry a selected evidence signal into the analysis workspace."""
+    st.session_state["selected_signal"] = {
+        "title": str(item.get("title", "Selected signal")),
+        "detail": str(item.get("detail", "")),
+        "kind": str(item.get("kind", "observation")),
+        "next_step": str(item.get("next_step", item.get("action", "Inspect the supporting records"))),
+    }
+    kind = str(item.get("kind", "")).lower()
+    title = str(item.get("title", "")).lower()
+    if any(token in kind + " " + title for token in ("time", "date", "trend", "period")):
+        mode = "Time trend"
+    elif any(token in kind + " " + title for token in ("correlation", "relationship", "association")):
+        mode = "Relationship"
+    elif any(token in kind + " " + title for token in ("distribution", "outlier", "spread")):
+        mode = "Distribution"
+    elif any(token in kind + " " + title for token in ("category", "segment", "group", "concentration")):
+        mode = "Compare groups"
+    else:
+        mode = "Recommended"
+    st.session_state["nav_page"] = "Analysis Studio"
+    if mode != "Recommended":
+        st.session_state["chart_type"] = mode
+        st.session_state.pop("studio_mode", None)
+
 # ── Design system ──────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -158,6 +185,58 @@ button[kind="primary"]{background:linear-gradient(110deg,#6250dc,#8a70ef)!import
 [data-testid="stFileUploader"] section{background:transparent}
 [data-testid="stFileUploader"] button{border-radius:9px}
 @media(max-width:900px){.block-container{padding:1rem 1rem 3rem}.hero{padding:22px}.hero h1{font-size:1.6rem!important}.upload-panel{padding:16px}.upload-guidance{min-height:0}.pagehead{align-items:flex-start;flex-direction:column}.overview-intro{align-items:flex-start;flex-direction:column}.overview-live{align-self:flex-start}}
+
+/* ── COSMIC INTELLIGENCE DESIGN LAYER ───────────────────────────────────── */
+:root{--space-950:#080d20;--space-900:#0d1530;--space-800:#172348;--nebula-violet:#927cff;--nebula-cyan:#55d9e8;--nebula-blue:#5b9cff;--nebula-gold:#f2c879;--glow-violet:rgba(145,124,255,.24);--glow-cyan:rgba(85,217,232,.18)}
+.stApp{background:radial-gradient(ellipse at 12% 0%,rgba(112,91,232,.13),transparent 33%),radial-gradient(ellipse at 92% 8%,rgba(47,190,211,.10),transparent 28%),linear-gradient(180deg,#f6f7ff 0%,#f1f5fc 54%,#f7f8fc 100%);background-attachment:fixed}
+.block-container{max-width:1600px;padding-top:1.25rem;padding-bottom:4.5rem}
+[data-testid="stSidebar"]{background:radial-gradient(ellipse at 50% 0%,rgba(104,91,209,.28),transparent 43%),linear-gradient(165deg,#090f25 0%,#111d3c 56%,#211e4b 100%);box-shadow:12px 0 38px rgba(17,25,57,.12)}
+[data-testid="stSidebar"] [data-testid="stRadio"] label{border-radius:11px;padding:.35rem .55rem;transition:background .2s ease}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{background:rgba(153,139,255,.13)}
+.brandmark{position:relative;isolation:isolate;border:1px solid rgba(255,255,255,.28);box-shadow:0 0 0 5px rgba(142,125,255,.08),0 0 28px rgba(83,206,231,.25)}
+.brandmark:after{content:"";position:absolute;inset:-5px;border:1px solid rgba(107,220,235,.22);border-radius:16px;z-index:-1}
+.brandname{letter-spacing:-.055em}
+.hero{isolation:isolate;min-height:220px;padding:34px 38px;background:radial-gradient(ellipse at 80% 18%,rgba(118,103,242,.55),transparent 30%),radial-gradient(ellipse at 100% 100%,rgba(42,192,211,.27),transparent 34%),linear-gradient(118deg,#080f27 0%,#17254c 53%,#34306c 100%);border:1px solid rgba(176,185,255,.18);box-shadow:0 22px 60px rgba(23,29,74,.22),inset 0 1px rgba(255,255,255,.12)}
+.hero:before{width:410px;height:410px;right:-80px;top:-250px;border:1px solid rgba(196,201,255,.28);box-shadow:0 0 0 24px rgba(255,255,255,.035),0 0 0 54px rgba(255,255,255,.025),0 0 0 88px rgba(255,255,255,.018),0 0 70px rgba(128,113,255,.22)}
+.hero:after{width:220px;height:220px;right:19%;bottom:-165px;background:radial-gradient(circle,rgba(72,223,229,.28),rgba(72,223,229,0) 68%);filter:blur(2px)}
+.hero .eyebrow{color:#8deaf0;letter-spacing:.22em}
+.hero h1{font-size:clamp(2rem,4vw,3rem)!important;letter-spacing:-.065em;text-shadow:0 4px 28px rgba(138,129,255,.22)}
+.hero p{max-width:820px;color:#e1e7ff;font-size:1rem}
+.hero .hero-meta{color:#b9c8ef;letter-spacing:.12em}
+.kicker{color:#7161dc;letter-spacing:.18em}
+.pagehead{padding:16px 19px;border:1px solid rgba(139,148,211,.17);border-radius:18px;background:linear-gradient(110deg,rgba(255,255,255,.82),rgba(248,249,255,.66));box-shadow:0 8px 25px rgba(37,48,95,.045)}
+.card,.signal-card,.health-card,.domain-card,.upload-guidance,.upload-panel{border-color:rgba(128,137,193,.22);box-shadow:0 10px 28px rgba(33,43,89,.055),inset 0 1px rgba(255,255,255,.8);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.card:hover,.signal-card:hover,.health-card:hover,.domain-card:hover{transform:translateY(-2px);border-color:rgba(126,111,231,.42);box-shadow:0 15px 34px rgba(48,53,117,.10),0 0 24px rgba(120,105,230,.06)}
+[data-testid="stMetric"]{position:relative;overflow:hidden;border-color:rgba(128,137,193,.22);background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(247,248,255,.94));box-shadow:0 10px 26px rgba(33,43,89,.065)}
+[data-testid="stMetric"]:before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:linear-gradient(90deg,#8a75f5,#55d9e8,#f2c879)}
+[data-testid="stMetricValue"]{letter-spacing:-.055em}
+[data-testid="stPlotlyChart"]{border:1px solid rgba(126,139,198,.22);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(249,250,255,.94));box-shadow:0 12px 30px rgba(31,43,92,.06),inset 0 1px rgba(255,255,255,.9);transition:box-shadow .2s ease,border-color .2s ease}
+[data-testid="stPlotlyChart"]:hover{border-color:rgba(112,103,224,.4);box-shadow:0 16px 36px rgba(31,43,92,.10),0 0 26px rgba(110,100,226,.07)}
+.signal-card{border-left:3px solid transparent;border-image:linear-gradient(180deg,#907cff,#55d9e8) 1;background:linear-gradient(120deg,#fff 0%,#fbfbff 100%)}
+.signal-index{color:#7f83a8}
+.signal-kind{color:#6e60d7}
+.signal-next{color:#6558cb}
+.overview-live{box-shadow:0 0 0 4px rgba(54,188,151,.06)}
+.upload-panel{background:radial-gradient(ellipse at 90% 0%,rgba(125,111,238,.12),transparent 45%),linear-gradient(135deg,#fff 0%,#f7f7ff 100%)}
+.upload-guidance{background:linear-gradient(145deg,#fff,#f9faff)}
+.format-list span{background:linear-gradient(135deg,#f0edff,#e9faff);border:1px solid rgba(129,115,230,.10)}
+.loaded-dataset{box-shadow:0 7px 20px rgba(31,130,111,.06)}
+.stButton>button,.stDownloadButton>button{border-color:rgba(126,137,193,.25);box-shadow:0 3px 10px rgba(37,45,91,.035);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.stButton>button:hover,.stDownloadButton>button:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(82,73,174,.12);border-color:#9385ef}
+button[kind="primary"]{background:linear-gradient(112deg,#6655dc 0%,#8874ef 54%,#3abac8 140%)!important;box-shadow:0 8px 20px rgba(104,84,220,.24)!important}
+button[kind="primary"]:hover{box-shadow:0 12px 28px rgba(104,84,220,.34)!important}
+[data-testid="stSelectbox"]>div,[data-testid="stMultiSelect"]>div,[data-testid="stTextInput"]>div,[data-testid="stNumberInput"]>div{border-radius:12px}
+[data-testid="stTextInput"] input,[data-testid="stNumberInput"] input{border-radius:11px}
+[data-testid="stTabs"] button[aria-selected="true"]{color:#6657d5;border-bottom-color:#7565e7}
+[data-testid="stProgress"]>div>div>div{background:linear-gradient(90deg,#7664e8,#55d9e8)}
+[data-testid="stFileUploader"]{border:1px dashed rgba(119,105,220,.55);background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(246,247,255,.9));box-shadow:inset 0 0 22px rgba(121,105,224,.035)}
+[data-testid="stAlert"]{border:1px solid rgba(126,137,193,.18);box-shadow:0 6px 18px rgba(33,43,89,.04)}
+:focus-visible{outline:3px solid rgba(82,194,219,.8)!important;outline-offset:2px!important}
+@media(max-width:900px){.hero{min-height:0;padding:25px 23px}.hero:before{right:-180px}.block-container{padding-left:1rem;padding-right:1rem}.pagehead{padding:14px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+/* Dark theme keeps the same nebula identity with readable contrast. */
+.stApp:has([data-testid="stSidebar"]) .unused-cosmic-hook{display:none}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -568,7 +647,8 @@ if upload is not None:
                         f'<div class="signal-card"><div class="signal-top"><span class="signal-index">{index:02d}</span><span class="signal-kind">{kind}</span></div><div class="signal-title">{title}</div><p>{detail}</p><div class="signal-next">NEXT STEP · {next_step}</div><div class="signal-meta"><span>{evidence_level}</span><span>{score_label}</span><span>Sample: {sample_label}</span></div><p class="subtle">{priority_reason}</p></div>',
                         unsafe_allow_html=True,
                     )
-                st.button("Investigate these signals", type="primary", key="overview_investigate_signals", on_click=go_to_page, args=("Analysis Studio",))
+                    st.button("Investigate this signal", key=f"investigate_signal_{index}", on_click=investigate_signal, args=(item,))
+                st.button("Open full Analysis Studio", type="primary", key="overview_investigate_signals", on_click=go_to_page, args=("Analysis Studio",))
             else:
                 st.markdown('<div class="empty"><strong>No strong automatic signals yet.</strong><p>Start with a field or data-quality review, then choose a question in Analysis Studio.</p></div>', unsafe_allow_html=True)
                 st.button("Open Analysis Studio", type="primary", key="overview_empty_studio", on_click=go_to_page, args=("Analysis Studio",))
@@ -655,6 +735,12 @@ if upload is not None:
     elif page == "Analysis Studio":
         st.markdown("## Analysis Studio")
         st.caption("Choose the question, dimensions, measures and method. All views use the active global filters.")
+        selected_signal = st.session_state.get("selected_signal")
+        if selected_signal:
+            st.markdown(f'<div class="signal-card"><div class="signal-kind">INVESTIGATION CONTEXT · {escape(selected_signal["kind"].upper())}</div><div class="signal-title">{escape(selected_signal["title"])}</div><p>{escape(selected_signal["detail"])}</p><div class="signal-next">SUGGESTED NEXT STEP · {escape(selected_signal["next_step"])}</div></div>', unsafe_allow_html=True)
+            if st.button("Clear investigation context", key="clear_selected_signal"):
+                st.session_state.pop("selected_signal", None)
+                st.rerun()
         if not numeric_cols and not category_cols and not date_cols:
             st.warning("No analyzable fields were detected. Review field roles in the sidebar.")
         mode_options = ["Compare groups", "Time trend", "Distribution", "Relationship", "Category composition"]
