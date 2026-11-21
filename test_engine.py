@@ -110,7 +110,8 @@ def test_decimal_comma_and_thousands_separators():
 
 def test_duplicate_order_ids_are_counted_once():
     result = analyze_sales(sample())
-    assert result.summary["order_count"] == 3
+    # A3 is rejected for its invalid date; the two valid A1 rows count as one order.
+    assert result.summary["order_count"] == 2
 
 
 def test_full_twenty_row_demo_file_is_fully_accepted_with_expected_totals():
