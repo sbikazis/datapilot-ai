@@ -1239,12 +1239,25 @@ if dataset_name is not None:
         st.markdown("## Reports & exports")
         st.caption("Build a portable report from the current data and filter state. Report figures are computed, not generated from invented context.")
         report_title = st.text_input("Report title", value=f"{profile.dataset_kind} analysis")
+        report_meta_left, report_meta_right = st.columns(2)
+        with report_meta_left:
+            report_prepared_for = st.text_input("Prepared for · client or project", key="report_prepared_for", max_chars=120)
+        with report_meta_right:
+            report_prepared_by = st.text_input("Prepared by", value=st.session_state.workspace_name, key="report_prepared_by", max_chars=80)
+        report_analyst_note = st.text_area(
+            "Analyst note · optional context for the recipient",
+            key="report_analyst_note", max_chars=1200,
+            help="Your own context or scope note. It is labelled as author-provided and is not presented as a finding from the data.",
+        )
         report_findings = profile.insights[:12]
         report_data = build_report_data(
             data, filtered, numeric_cols, profile.columns, profile.quality,
             report_findings, next_questions, st.session_state.active_filters,
             title=report_title, dataset=dataset_name, domain=profile.dataset_kind,
             workspace=st.session_state.workspace_name,
+            prepared_for=report_prepared_for,
+            prepared_by=report_prepared_by,
+            analyst_note=report_analyst_note,
             precision=st.session_state.get("precision", 2),
         )
         html = render_html_report(report_data, include_method_notes=st.session_state.get("show_method_notes", True))
