@@ -73,6 +73,12 @@ def apply_analysis_defaults():
     st.session_state.pop("cmp_limit", None)
 
 
+def start_sample_dataset():
+    """Set navigation and sample state before Streamlit rebuilds keyed widgets."""
+    st.session_state["use_sample_dataset"] = True
+    st.session_state["nav_page"] = "Overview"
+
+
 
 def investigate_signal(item):
     """Carry a selected evidence signal into the analysis workspace."""
@@ -462,10 +468,13 @@ if dataset_name is None:
         with left:
             st.markdown("## Start with a real analysis, even before you have a file")
             st.write("Explore a fictional order dataset to see how profiling, guided analysis, evidence-ranked decisions and reports work end to end.")
-            if st.button("Explore the sample dataset", type="primary", use_container_width=True):
-                st.session_state["use_sample_dataset"] = True
-                st.session_state["nav_page"] = "Overview"
-                st.rerun()
+            st.button(
+                "Explore the sample dataset",
+                type="primary",
+                use_container_width=True,
+                on_click=start_sample_dataset,
+                key="start_sample_dataset",
+            )
             st.caption("No upload required · generated locally · no external AI processing")
             st.markdown("## Or bring your own data")
             st.write("Upload a dataset and DataPilot will profile its fields, check data quality, identify useful comparisons, and recommend a starting analysis. You stay in control of the definitions and calculations.")
