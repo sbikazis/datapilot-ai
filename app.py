@@ -277,368 +277,369 @@ if upload is None:
                 st.markdown(f'<div class="card"><div class="card-title">{name}</div><div class="card-copy">{desc}</div></div>', unsafe_allow_html=True)
     st.stop()
 
-# ── Load and profile ───────────────────────────────────────────────────────
-try:
-    sheet_names = []
-    chosen_sheet = None
-    if upload.name.lower().endswith((".xlsx", ".xls")):
-        book = pd.ExcelFile(BytesIO(upload.getvalue()))
-        sheet_names = book.sheet_names
-        if "selected_sheet" not in st.session_state or st.session_state.selected_sheet not in sheet_names:
-            st.session_state.selected_sheet = sheet_names[0]
-        chosen_sheet = st.session_state.selected_sheet
-    raw, _ = read_upload(upload, chosen_sheet)
-    raw.columns = [str(c).strip() or f"unnamed_{i+1}" for i, c in enumerate(raw.columns)]
-    if raw.empty:
-        st.error("This file contains no data rows. Check the header row and selected sheet.")
+if upload is not None:
+    # ── Load and profile ───────────────────────────────────────────────────────
+    try:
+        sheet_names = []
+        chosen_sheet = None
+        if upload.name.lower().endswith((".xlsx", ".xls")):
+            book = pd.ExcelFile(BytesIO(upload.getvalue()))
+            sheet_names = book.sheet_names
+            if "selected_sheet" not in st.session_state or st.session_state.selected_sheet not in sheet_names:
+                st.session_state.selected_sheet = sheet_names[0]
+            chosen_sheet = st.session_state.selected_sheet
+        raw, _ = read_upload(upload, chosen_sheet)
+        raw.columns = [str(c).strip() or f"unnamed_{i+1}" for i, c in enumerate(raw.columns)]
+        if raw.empty:
+            st.error("This file contains no data rows. Check the header row and selected sheet.")
+            st.stop()
+        if sheet_names:
+            chosen_sheet = st.sidebar.selectbox("Excel worksheet", sheet_names, index=sheet_names.index(chosen_sheet), key="selected_sheet")
+            if chosen_sheet != st.session_state.get("_loaded_sheet"):
+                raw, _ = read_upload(upload, chosen_sheet)
+                st.session_state["_loaded_sheet"] = chosen_sheet
+        profile = make_profile(raw)
+    except Exception as exc:
+        st.error(f"DataPilot could not read this file: {exc}")
+        st.info("Check the file format, headers, worksheet and encoding. If it is a nested JSON export, try exporting it as a flat table.")
         st.stop()
-    if sheet_names:
-        chosen_sheet = st.sidebar.selectbox("Excel worksheet", sheet_names, index=sheet_names.index(chosen_sheet), key="selected_sheet")
-        if chosen_sheet != st.session_state.get("_loaded_sheet"):
-            raw, _ = read_upload(upload, chosen_sheet)
-            st.session_state["_loaded_sheet"] = chosen_sheet
-    profile = make_profile(raw)
-except Exception as exc:
-    st.error(f"DataPilot could not read this file: {exc}")
-    st.info("Check the file format, headers, worksheet and encoding. If it is a nested JSON export, try exporting it as a flat table.")
-    st.stop()
 
-# Optional semantic role review; the raw file remains untouched.
-with st.sidebar:
-    with st.expander("Review detected field roles", expanded=False):
-        role_options = ["Automatic", "Measure", "Category", "Date / time", "Identifier"]
-        for row in profile.columns:
-            colname = row["column"]
-            current = st.session_state.role_overrides.get(colname, "Automatic")
-            st.selectbox(colname, role_options, index=role_options.index(current), key=f"role_{colname}",
-                         on_change=lambda c=colname: st.session_state.role_overrides.update({c: st.session_state[f"role_{c}"]}))
+    # Optional semantic role review; the raw file remains untouched.
+    with st.sidebar:
+        with st.expander("Review detected field roles", expanded=False):
+            role_options = ["Automatic", "Measure", "Category", "Date / time", "Identifier"]
+            for row in profile.columns:
+                colname = row["column"]
+                current = st.session_state.role_overrides.get(colname, "Automatic")
+                st.selectbox(colname, role_options, index=role_options.index(current), key=f"role_{colname}",
+                             on_change=lambda c=colname: st.session_state.role_overrides.update({c: st.session_state[f"role_{c}"]}))
 
-# Rebuild role lists from the user's explicit overrides. Parsing is conservative.
-numeric_cols, category_cols, date_cols, id_cols = [], [], [], []
-data = profile.data.copy()
-for meta in profile.columns:
-    col = meta["column"]
-    override = st.session_state.role_overrides.get(col, "Automatic")
-    if override == "Automatic":
-        role = meta["role"]
-    else:
-        role = override
-        meta["role"] = f"{override} · user override"
-    if role == "Measure":
-        converted = pd.to_numeric(data[col], errors="coerce")
-        if converted.notna().any():
-            data[col] = converted
+    # Rebuild role lists from the user's explicit overrides. Parsing is conservative.
+    numeric_cols, category_cols, date_cols, id_cols = [], [], [], []
+    data = profile.data.copy()
+    for meta in profile.columns:
+        col = meta["column"]
+        override = st.session_state.role_overrides.get(col, "Automatic")
+        if override == "Automatic":
+            role = meta["role"]
+        else:
+            role = override
+            meta["role"] = f"{override} · user override"
+        if role == "Measure":
+            converted = pd.to_numeric(data[col], errors="coerce")
+            if converted.notna().any():
+                data[col] = converted
+                numeric_cols.append(col)
+            else:
+                category_cols.append(col)
+        elif role == "Date / time":
+            converted = pd.to_datetime(data[col], errors="coerce", format="mixed")
+            if converted.notna().any():
+                data[col] = converted
+                date_cols.append(col)
+            else:
+                category_cols.append(col)
+        elif role == "Identifier":
+            id_cols.append(col)
+            category_cols.append(col)
+        elif role == "Category":
+            category_cols.append(col)
+        elif role == "Numeric measure":
             numeric_cols.append(col)
-        else:
-            category_cols.append(col)
-    elif role == "Date / time":
-        converted = pd.to_datetime(data[col], errors="coerce", format="mixed")
-        if converted.notna().any():
-            data[col] = converted
+        elif role == "Date / time":
             date_cols.append(col)
+        elif "Identifier" in role or "Category" in role:
+            category_cols.append(col)
         else:
             category_cols.append(col)
-    elif role == "Identifier":
-        id_cols.append(col)
-        category_cols.append(col)
-    elif role == "Category":
-        category_cols.append(col)
-    elif role == "Numeric measure":
-        numeric_cols.append(col)
-    elif role == "Date / time":
-        date_cols.append(col)
-    elif "Identifier" in role or "Category" in role:
-        category_cols.append(col)
-    else:
-        category_cols.append(col)
 
-numeric_cols = list(dict.fromkeys(numeric_cols))
-category_cols = list(dict.fromkeys(category_cols))
-date_cols = list(dict.fromkeys(date_cols))
-id_cols = list(dict.fromkeys(id_cols))
+    numeric_cols = list(dict.fromkeys(numeric_cols))
+    category_cols = list(dict.fromkeys(category_cols))
+    date_cols = list(dict.fromkeys(date_cols))
+    id_cols = list(dict.fromkeys(id_cols))
 
-# Build a profile view that respects role corrections.
-profile.numeric_columns = numeric_cols
-profile.categorical_columns = category_cols
-profile.date_columns = date_cols
-profile.data = data
-profile.insights = build_evidence_findings(data, numeric_cols, category_cols, date_cols)
-recommendation, recommendation_reason = recommend_visualization(numeric_cols, category_cols, date_cols)
+    # Build a profile view that respects role corrections.
+    profile.numeric_columns = numeric_cols
+    profile.categorical_columns = category_cols
+    profile.date_columns = date_cols
+    profile.data = data
+    profile.insights = build_evidence_findings(data, numeric_cols, category_cols, date_cols)
+    recommendation, recommendation_reason = recommend_visualization(numeric_cols, category_cols, date_cols)
 
-# Global filters apply across every workspace page.
-st.sidebar.markdown("---")
-st.sidebar.markdown("**GLOBAL FILTERS**")
-filtered = data.copy()
-with st.sidebar.expander("Filter this dataset", expanded=False):
-    filterable = category_cols[:12]
-    for col in filterable:
-        unique = data[col].dropna().astype(str).unique().tolist()
-        if 1 < len(unique) <= 150:
-            selected = st.multiselect(col, unique, default=st.session_state.active_filters.get(col, []), key=f"global_filter_{col}")
-            st.session_state.active_filters[col] = selected
-            if selected:
-                filtered = filtered[filtered[col].astype(str).isin(selected)]
-        elif len(unique) > 150:
-            st.caption(f"{col}: {len(unique):,} values — use Data Explorer search.")
-st.sidebar.caption(f"{len(filtered):,} / {len(data):,} rows in current view")
-if st.sidebar.button("Clear all filters", use_container_width=True):
-    st.session_state.active_filters = {}
-    for field in filterable:
-        st.session_state.pop(f"global_filter_{field}", None)
-    st.rerun()
-
-# Recalculate findings against the active global filter so explanations match the visible records.
-profile.insights = build_evidence_findings(filtered, numeric_cols, category_cols, date_cols)
-
-# Common source context header
-st.markdown(f'<div class="pagehead"><div><div class="kicker">{profile.dataset_kind} · DATASET PROFILE</div><h2 style="margin:3px 0">{upload.name}</h2><div class="subtle">{len(data):,} rows · {len(data.columns):,} fields · recommended starting point: {recommendation}</div></div><span class="pill">LIVE SESSION</span></div>', unsafe_allow_html=True)
-
-# ── Overview ───────────────────────────────────────────────────────────────
-if page == "Overview":
-    k = st.columns(5)
-    k[0].metric("Rows in view", f"{len(filtered):,}", f"{len(data)-len(filtered):,} filtered out")
-    k[1].metric("Fields", f"{len(data.columns):,}")
-    k[2].metric("Measures", f"{len(numeric_cols):,}")
-    k[3].metric("Date fields", f"{len(date_cols):,}")
-    k[4].metric("Missing cells", f"{int(data.isna().sum().sum()):,}", f"{profile.quality['missing_pct']}% of source cells")
-    st.markdown("## Intelligence brief")
-    st.caption("Evidence-led observations from the current dataset. These are patterns to investigate, not claims about causes.")
-    for item in profile.insights[:8]:
-        st.markdown(f'<div class="insight"><div class="kind">{item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p><div class="next">NEXT INVESTIGATION → {item["action"]}</div></div>', unsafe_allow_html=True)
-    if not profile.insights:
-        st.markdown('<div class="empty">No reliable automatic findings yet. Open Analysis Studio to choose a measure and investigate the dataset.</div>', unsafe_allow_html=True)
-    st.markdown("## Recommended first analysis")
-    c1, c2 = st.columns([1.1, .9], gap="large")
-    with c1:
-        st.markdown(f'<div class="card"><div class="card-label">RECOMMENDED VIEW</div><div class="card-title">{recommendation}</div><div class="card-copy">{recommendation_reason}</div></div>', unsafe_allow_html=True)
-        if numeric_cols:
-            metric = st.selectbox("Preview a measure", numeric_cols, key="overview_metric")
-            series = pd.to_numeric(filtered[metric], errors="coerce").dropna()
-            if len(series):
-                st.metric(f"{metric} · total", fmt(series.sum()), f"Average {fmt(series.mean())} · median {fmt(series.median())}")
-                fig = px.histogram(filtered, x=metric, marginal="box", nbins=32, color_discrete_sequence=["#7563e8"])
-                fig.update_layout(height=330, margin=dict(t=15,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
-    with c2:
-        st.markdown("### Data health")
-        q = profile.quality
-        st.metric("Exact duplicate rows", f"{q['duplicate_rows']:,}")
-        st.metric("Constant fields", f"{len(q['constant_columns']):,}")
-        missing = data.isna().sum().sort_values(ascending=False)
-        missing = missing[missing > 0].head(8)
-        if len(missing):
-            st.markdown("**Fields with most missing values**")
-            st.dataframe(missing.rename("Missing").reset_index().rename(columns={"index":"Field"}), use_container_width=True, hide_index=True)
-        else:
-            st.success("No missing cells detected in the source data.")
-    st.caption("The automatic findings are statistical/rule-based. No external generative AI model is connected in this release.")
-
-# ── Analysis Studio ────────────────────────────────────────────────────────
-elif page == "Analysis Studio":
-    st.markdown("## Analysis Studio")
-    st.caption("Choose the question, dimensions, measures and method. All views use the active global filters.")
-    if not numeric_cols and not category_cols and not date_cols:
-        st.warning("No analyzable fields were detected. Review field roles in the sidebar.")
-    mode_options = ["Compare groups", "Time trend", "Distribution", "Relationship", "Category composition"]
-    default_mode = {"Ranked comparison":"Compare groups","Time trend":"Time trend","Distribution":"Distribution","Relationship scatter":"Relationship","Category frequency":"Category composition"}.get(recommendation, "Compare groups")
-    mode = st.segmented_control("Analysis type", mode_options, default=default_mode, key="studio_mode")
-    mode = mode or default_mode
-    if mode == "Compare groups":
-        if numeric_cols and category_cols:
-            a,b,c = st.columns([1.15,1.15,.9])
-            with a: dimension = st.selectbox("Dimension", category_cols, key="cmp_dimension")
-            with b: measure = st.selectbox("Measure", numeric_cols, key="cmp_measure")
-            with c: agg = st.selectbox("Aggregation", ["sum","mean","median","min","max","count"], key="cmp_agg")
-            limit = st.slider("Show groups", 3, 40, 12, key="cmp_limit")
-            summary = grouped_summary(filtered, dimension, measure, agg).head(limit)
-            if summary.empty:
-                st.info("No rows remain for this comparison. Adjust the global filters.")
-            else:
-                chart = st.selectbox("Chart style", ["Horizontal bars","Vertical bars","Treemap","Box plot"], key="cmp_chart")
-                if chart == "Horizontal bars":
-                    fig = px.bar(summary.sort_values("value"), x="value", y=dimension, orientation="h", color="value", color_continuous_scale=["#c7c0fb","#6955e8","#21b8b2"])
-                elif chart == "Vertical bars":
-                    fig = px.bar(summary, x=dimension, y="value", color="value", color_continuous_scale=["#c7c0fb","#6955e8","#21b8b2"])
-                elif chart == "Treemap":
-                    fig = px.treemap(summary, path=[dimension], values="value", color="value", color_continuous_scale="Tealgrn")
-                else:
-                    fig = px.box(filtered, x=dimension, y=measure, points="outliers")
-                fig.update_layout(height=440, margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
-                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
-                top = summary.iloc[0]
-                total = summary["value"].sum()
-                share = float(top["value"] / total * 100) if total and agg == "sum" else None
-                st.info(f"Highest {agg} of {measure}: **{top[dimension]}** ({fmt(top['value'])})." + (f" This is {share:.1f}% of the displayed total." if share is not None else ""))
-                st.markdown("### Exact values")
-                st.dataframe(summary, use_container_width=True, hide_index=True)
-                st.download_button("Download comparison (CSV)", summary.to_csv(index=False).encode("utf-8-sig"), "datapilot_comparison.csv", "text/csv")
-        else:
-            st.info("Group comparison requires at least one category/dimension and one numeric measure. Correct field roles in the sidebar if needed.")
-    elif mode == "Time trend":
-        if date_cols and numeric_cols:
-            a,b,c = st.columns(3)
-            with a: date_col = st.selectbox("Date field", date_cols)
-            with b: measure = st.selectbox("Measure", numeric_cols, key="trend_measure")
-            with c: grain = st.selectbox("Time grain", ["Day","Week","Month","Quarter","Year"], index=2)
-            agg = st.selectbox("Aggregation", ["sum","mean","median","min","max","count"], key="trend_agg")
-            trend = time_summary(filtered, date_col, measure, grain, agg)
-            if trend.empty:
-                st.warning("No valid date-and-measure pairs remain after filters.")
-            else:
-                fig = build_time_figure(trend)
-                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
-                if len(trend) > 1:
-                    first, last = float(trend.iloc[0]["value"]), float(trend.iloc[-1]["value"])
-                    delta = last-first
-                    m1,m2,m3 = st.columns(3)
-                    m1.metric("First period", fmt(first))
-                    m2.metric("Latest period", fmt(last), fmt(delta) + " vs first")
-                    m3.metric("Periods", f"{len(trend):,}")
-                st.dataframe(trend, use_container_width=True, hide_index=True)
-                st.download_button("Download time series (CSV)", trend.to_csv(index=False).encode("utf-8-sig"), "datapilot_time_series.csv", "text/csv")
-        else:
-            st.info("Time analysis needs one date field and one numeric measure.")
-    elif mode == "Distribution":
-        if numeric_cols:
-            measure = st.selectbox("Measure", numeric_cols, key="dist_field")
-            chart = st.selectbox("Distribution view", ["Histogram + box","Violin","ECDF"])
-            if chart == "Histogram + box":
-                fig = px.histogram(filtered, x=measure, marginal="box", nbins=40, color_discrete_sequence=["#6955e8"])
-            elif chart == "Violin":
-                fig = px.violin(filtered, y=measure, box=True, points="outliers", color_discrete_sequence=["#21b8b2"])
-            else:
-                fig = px.ecdf(filtered, x=measure, color_discrete_sequence=["#6955e8"])
-            fig.update_layout(height=430, margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
-            s = pd.to_numeric(filtered[measure], errors="coerce").dropna()
-            if len(s):
-                stats = numeric_summary(s)
-                m = st.columns(5)
-                for col, label, value in zip(m, ["Count","Mean","Median","IQR outliers","90th percentile"], [stats["count"],stats["mean"],stats["median"],stats["iqr_outliers"],stats["p90"]]):
-                    col.metric(label, fmt(value))
-                st.caption("Statistics are calculated after global filters. Standard deviation is sample-based.")
-        else:
-            st.info("No numeric measures are available. Review detected field roles.")
-    elif mode == "Relationship":
-        if len(numeric_cols) >= 2:
-            a,b = st.columns(2)
-            with a: x = st.selectbox("X measure", numeric_cols, key="rel_x")
-            with b: y = st.selectbox("Y measure", [v for v in numeric_cols if v != x], key="rel_y")
-            color_options = ["None"] + category_cols
-            color = st.selectbox("Color by dimension (optional)", color_options)
-            plot_data = filtered.copy()
-            plot_data[x] = pd.to_numeric(plot_data[x], errors="coerce")
-            plot_data[y] = pd.to_numeric(plot_data[y], errors="coerce")
-            plot_data = plot_data.dropna(subset=[x,y])
-            if color != "None":
-                fig = px.scatter(plot_data, x=x, y=y, color=color, opacity=.75)
-            else:
-                fig = px.scatter(plot_data, x=x, y=y, opacity=.75, color_discrete_sequence=["#6955e8"])
-            fig.update_traces(marker={"size":9,"line":{"width":1,"color":"white"}})
-            fig.update_layout(height=450, hovermode="closest", margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
-            corr, n = safe_correlation(plot_data, x, y)
-            if corr is not None:
-                st.metric("Pearson correlation", f"{corr:.3f}", f"{n:,} paired observations")
-                st.caption("Correlation describes linear association, not causation. Inspect the scatter plot for clusters and influential observations.")
-        else:
-            st.info("Relationship analysis requires at least two numeric measures.")
-    elif mode == "Category composition":
-        if category_cols:
-            dim = st.selectbox("Category field", category_cols)
-            counts = category_summary(filtered[dim], top_n=20).rename(columns={"category": dim})
-            chart = st.selectbox("Composition view", ["Donut","Treemap","Bar"])
-            if chart == "Donut":
-                fig = px.pie(counts, names=dim, values="records", hole=.58)
-            elif chart == "Treemap":
-                fig = px.treemap(counts, path=[dim], values="records", color="records", color_continuous_scale="Tealgrn")
-            else:
-                fig = px.bar(counts.sort_values("records"), x="records", y=dim, orientation="h", color="records", color_continuous_scale=["#c7c0fb","#6955e8"])
-            fig.update_layout(height=430, margin=dict(t=20,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
-            st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
-            st.dataframe(counts, use_container_width=True, hide_index=True)
-        else:
-            st.info("No category or identifier fields are available.")
-
-# ── Data Explorer ──────────────────────────────────────────────────────────
-elif page == "Data Explorer":
-    st.markdown("## Data Explorer")
-    st.caption("Inspect source records, search values, understand field roles and trace every filtered result back to rows.")
-    a,b,c = st.columns([1.2,1,1])
-    with a: search = st.text_input("Search across text fields", placeholder="Type a value, label or identifier…")
-    with b: selected_columns = st.multiselect("Visible columns", list(data.columns), default=list(data.columns[:min(12,len(data.columns))]))
-    with c: row_limit = st.selectbox("Rows per view", [50,100,250,500,1000,5000], index=2)
-    view = filtered.copy()
-    if search:
-        mask = view.astype("string").apply(lambda s: s.str.contains(re.escape(search), case=False, na=False, regex=True)).any(axis=1)
-        view = view[mask]
-    if selected_columns:
-        view = view[selected_columns]
-    st.markdown(f"**{len(view):,} matching rows**")
-    st.dataframe(view.head(row_limit), use_container_width=True, hide_index=True, height=510)
-    st.download_button("Export current view as CSV", view.to_csv(index=False).encode("utf-8-sig"), "datapilot_explorer_view.csv", "text/csv")
-    st.markdown("### Field dictionary")
-    dictionary = pd.DataFrame(profile.columns)
-    st.dataframe(dictionary, use_container_width=True, hide_index=True)
-    st.markdown("### Missingness map")
-    missing = data.isna().mean().mul(100).sort_values(ascending=False)
-    missing = missing[missing > 0]
-    if len(missing):
-        mdf = missing.rename("Missing %").reset_index().rename(columns={"index":"Field"})
-        fig = px.bar(mdf, x="Missing %", y="Field", orientation="h", color="Missing %", color_continuous_scale=["#21b8b2","#6955e8"])
-        fig.update_layout(height=max(260,len(mdf)*34), margin=dict(t=10,b=10,l=10,r=10), coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.success("All source fields are complete.")
-
-# ── Reports ─────────────────────────────────────────────────────────────────
-elif page == "Reports":
-    st.markdown("## Reports & exports")
-    st.caption("Build a portable report from the current data and filter state. Report figures are computed, not generated from invented context.")
-    report_title = st.text_input("Report title", value=f"{profile.dataset_kind} analysis")
-    report_findings = profile.insights[:12]
-    html = to_html_report(report_title, upload.name, profile, data, filtered, report_findings, st.session_state.workspace_name)
-    x1,x2,x3 = st.columns(3)
-    with x1:
-        st.download_button("Download executive report (HTML)", html.encode("utf-8"), "datapilot_executive_report.html", "text/html", use_container_width=True, type="primary")
-    with x2:
-        st.download_button("Download workbook (XLSX)", excel_export(data, profile, filtered), "datapilot_analysis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-    with x3:
-        payload = {"dataset":upload.name,"kind":profile.dataset_kind,"rows":len(data),"filtered_rows":len(filtered),"quality":profile.quality,"field_profile":profile.columns,"findings":profile.insights,"filters":st.session_state.active_filters}
-        st.download_button("Download analysis profile (JSON)", json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8"), "datapilot_profile.json", "application/json", use_container_width=True)
-    st.markdown("### Report preview")
-    st.markdown(f'<div class="card"><div class="card-label">EXECUTIVE REPORT</div><div class="card-title">{report_title}</div><div class="card-copy">{profile.dataset_kind} · {len(filtered):,} filtered rows · {len(profile.insights):,} evidence-led findings · includes field profile, key measures, quality checks and method caveats.</div></div>', unsafe_allow_html=True)
-    for item in report_findings[:5]:
-        st.markdown(f'<div class="insight"><div class="kind">{item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p></div>', unsafe_allow_html=True)
-    st.info("PDF export, scheduled delivery and saved report history are not included yet. HTML and Excel exports are available now.")
-
-# ── Settings ────────────────────────────────────────────────────────────────
-elif page == "Settings":
-    st.markdown("## Workspace settings")
-    st.caption("Control the current workspace presentation and analysis defaults. These settings are session-local.")
-    left,right = st.columns(2, gap="large")
-    with left:
-        st.markdown("### Identity")
-        st.text_input("Workspace name", key="workspace_name", max_chars=48)
-        st.text_input("Workspace subtitle", value="ADAPTIVE DATA INTELLIGENCE", key="workspace_subtitle")
-        st.markdown("### Appearance")
-        st.text_input("Brand mark / initials", key="workspace_mark", max_chars=3)
-        st.selectbox("Accent palette", ["Violet","Ocean","Emerald","Amber"], key="accent_palette")
-        st.selectbox("Theme", ["Light","Dark"], key="theme_mode")
-        st.selectbox("Density", ["Comfortable","Compact"], key="density")
-    with right:
-        st.markdown("### Analysis defaults")
-        st.selectbox("Default chart preference", ["Recommended","Bars","Line","Scatter","Table"], key="chart_type")
-        st.selectbox("Number precision", [0,1,2,3,4], index=2, key="precision")
-        st.selectbox("Default Top N", [5,10,12,20,30,50], index=2, key="default_top_n")
-        st.markdown("### Privacy & data handling")
-        st.info("Uploads are analyzed in the active app session. This build does not provide account login, persistent cloud projects, shared workspaces or external AI processing.")
-        st.checkbox("Show methodology notes in reports", value=True, key="show_method_notes")
-    st.markdown("---")
-    if st.button("Reset workspace preferences"):
-        for key, value in defaults.items():
-            st.session_state[key] = value
+    # Global filters apply across every workspace page.
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**GLOBAL FILTERS**")
+    filtered = data.copy()
+    with st.sidebar.expander("Filter this dataset", expanded=False):
+        filterable = category_cols[:12]
+        for col in filterable:
+            unique = data[col].dropna().astype(str).unique().tolist()
+            if 1 < len(unique) <= 150:
+                selected = st.multiselect(col, unique, default=st.session_state.active_filters.get(col, []), key=f"global_filter_{col}")
+                st.session_state.active_filters[col] = selected
+                if selected:
+                    filtered = filtered[filtered[col].astype(str).isin(selected)]
+            elif len(unique) > 150:
+                st.caption(f"{col}: {len(unique):,} values — use Data Explorer search.")
+    st.sidebar.caption(f"{len(filtered):,} / {len(data):,} rows in current view")
+    if st.sidebar.button("Clear all filters", use_container_width=True):
+        st.session_state.active_filters = {}
+        for field in filterable:
+            st.session_state.pop(f"global_filter_{field}", None)
         st.rerun()
-    st.caption("Persistent identity, custom logo uploads and cross-device settings require an authenticated storage layer; this page does not pretend those backend capabilities exist.")
 
-st.markdown('<div class="sectionline"></div><div class="subtle">DataPilot AI · Adaptive analysis, transparent calculations and evidence-led exploration. No fabricated causes, forecasts or business assumptions.</div>', unsafe_allow_html=True)
+    # Recalculate findings against the active global filter so explanations match the visible records.
+    profile.insights = build_evidence_findings(filtered, numeric_cols, category_cols, date_cols)
+
+    # Common source context header
+    st.markdown(f'<div class="pagehead"><div><div class="kicker">{profile.dataset_kind} · DATASET PROFILE</div><h2 style="margin:3px 0">{upload.name}</h2><div class="subtle">{len(data):,} rows · {len(data.columns):,} fields · recommended starting point: {recommendation}</div></div><span class="pill">LIVE SESSION</span></div>', unsafe_allow_html=True)
+
+    # ── Overview ───────────────────────────────────────────────────────────────
+    if page == "Overview":
+        k = st.columns(5)
+        k[0].metric("Rows in view", f"{len(filtered):,}", f"{len(data)-len(filtered):,} filtered out")
+        k[1].metric("Fields", f"{len(data.columns):,}")
+        k[2].metric("Measures", f"{len(numeric_cols):,}")
+        k[3].metric("Date fields", f"{len(date_cols):,}")
+        k[4].metric("Missing cells", f"{int(data.isna().sum().sum()):,}", f"{profile.quality['missing_pct']}% of source cells")
+        st.markdown("## Intelligence brief")
+        st.caption("Evidence-led observations from the current dataset. These are patterns to investigate, not claims about causes.")
+        for item in profile.insights[:8]:
+            st.markdown(f'<div class="insight"><div class="kind">{item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p><div class="next">NEXT INVESTIGATION → {item["action"]}</div></div>', unsafe_allow_html=True)
+        if not profile.insights:
+            st.markdown('<div class="empty">No reliable automatic findings yet. Open Analysis Studio to choose a measure and investigate the dataset.</div>', unsafe_allow_html=True)
+        st.markdown("## Recommended first analysis")
+        c1, c2 = st.columns([1.1, .9], gap="large")
+        with c1:
+            st.markdown(f'<div class="card"><div class="card-label">RECOMMENDED VIEW</div><div class="card-title">{recommendation}</div><div class="card-copy">{recommendation_reason}</div></div>', unsafe_allow_html=True)
+            if numeric_cols:
+                metric = st.selectbox("Preview a measure", numeric_cols, key="overview_metric")
+                series = pd.to_numeric(filtered[metric], errors="coerce").dropna()
+                if len(series):
+                    st.metric(f"{metric} · total", fmt(series.sum()), f"Average {fmt(series.mean())} · median {fmt(series.median())}")
+                    fig = px.histogram(filtered, x=metric, marginal="box", nbins=32, color_discrete_sequence=["#7563e8"])
+                    fig.update_layout(height=330, margin=dict(t=15,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
+        with c2:
+            st.markdown("### Data health")
+            q = profile.quality
+            st.metric("Exact duplicate rows", f"{q['duplicate_rows']:,}")
+            st.metric("Constant fields", f"{len(q['constant_columns']):,}")
+            missing = data.isna().sum().sort_values(ascending=False)
+            missing = missing[missing > 0].head(8)
+            if len(missing):
+                st.markdown("**Fields with most missing values**")
+                st.dataframe(missing.rename("Missing").reset_index().rename(columns={"index":"Field"}), use_container_width=True, hide_index=True)
+            else:
+                st.success("No missing cells detected in the source data.")
+        st.caption("The automatic findings are statistical/rule-based. No external generative AI model is connected in this release.")
+
+    # ── Analysis Studio ────────────────────────────────────────────────────────
+    elif page == "Analysis Studio":
+        st.markdown("## Analysis Studio")
+        st.caption("Choose the question, dimensions, measures and method. All views use the active global filters.")
+        if not numeric_cols and not category_cols and not date_cols:
+            st.warning("No analyzable fields were detected. Review field roles in the sidebar.")
+        mode_options = ["Compare groups", "Time trend", "Distribution", "Relationship", "Category composition"]
+        default_mode = {"Ranked comparison":"Compare groups","Time trend":"Time trend","Distribution":"Distribution","Relationship scatter":"Relationship","Category frequency":"Category composition"}.get(recommendation, "Compare groups")
+        mode = st.segmented_control("Analysis type", mode_options, default=default_mode, key="studio_mode")
+        mode = mode or default_mode
+        if mode == "Compare groups":
+            if numeric_cols and category_cols:
+                a,b,c = st.columns([1.15,1.15,.9])
+                with a: dimension = st.selectbox("Dimension", category_cols, key="cmp_dimension")
+                with b: measure = st.selectbox("Measure", numeric_cols, key="cmp_measure")
+                with c: agg = st.selectbox("Aggregation", ["sum","mean","median","min","max","count"], key="cmp_agg")
+                limit = st.slider("Show groups", 3, 40, 12, key="cmp_limit")
+                summary = grouped_summary(filtered, dimension, measure, agg).head(limit)
+                if summary.empty:
+                    st.info("No rows remain for this comparison. Adjust the global filters.")
+                else:
+                    chart = st.selectbox("Chart style", ["Horizontal bars","Vertical bars","Treemap","Box plot"], key="cmp_chart")
+                    if chart == "Horizontal bars":
+                        fig = px.bar(summary.sort_values("value"), x="value", y=dimension, orientation="h", color="value", color_continuous_scale=["#c7c0fb","#6955e8","#21b8b2"])
+                    elif chart == "Vertical bars":
+                        fig = px.bar(summary, x=dimension, y="value", color="value", color_continuous_scale=["#c7c0fb","#6955e8","#21b8b2"])
+                    elif chart == "Treemap":
+                        fig = px.treemap(summary, path=[dimension], values="value", color="value", color_continuous_scale="Tealgrn")
+                    else:
+                        fig = px.box(filtered, x=dimension, y=measure, points="outliers")
+                    fig.update_layout(height=440, margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
+                    st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
+                    top = summary.iloc[0]
+                    total = summary["value"].sum()
+                    share = float(top["value"] / total * 100) if total and agg == "sum" else None
+                    st.info(f"Highest {agg} of {measure}: **{top[dimension]}** ({fmt(top['value'])})." + (f" This is {share:.1f}% of the displayed total." if share is not None else ""))
+                    st.markdown("### Exact values")
+                    st.dataframe(summary, use_container_width=True, hide_index=True)
+                    st.download_button("Download comparison (CSV)", summary.to_csv(index=False).encode("utf-8-sig"), "datapilot_comparison.csv", "text/csv")
+            else:
+                st.info("Group comparison requires at least one category/dimension and one numeric measure. Correct field roles in the sidebar if needed.")
+        elif mode == "Time trend":
+            if date_cols and numeric_cols:
+                a,b,c = st.columns(3)
+                with a: date_col = st.selectbox("Date field", date_cols)
+                with b: measure = st.selectbox("Measure", numeric_cols, key="trend_measure")
+                with c: grain = st.selectbox("Time grain", ["Day","Week","Month","Quarter","Year"], index=2)
+                agg = st.selectbox("Aggregation", ["sum","mean","median","min","max","count"], key="trend_agg")
+                trend = time_summary(filtered, date_col, measure, grain, agg)
+                if trend.empty:
+                    st.warning("No valid date-and-measure pairs remain after filters.")
+                else:
+                    fig = build_time_figure(trend)
+                    st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
+                    if len(trend) > 1:
+                        first, last = float(trend.iloc[0]["value"]), float(trend.iloc[-1]["value"])
+                        delta = last-first
+                        m1,m2,m3 = st.columns(3)
+                        m1.metric("First period", fmt(first))
+                        m2.metric("Latest period", fmt(last), fmt(delta) + " vs first")
+                        m3.metric("Periods", f"{len(trend):,}")
+                    st.dataframe(trend, use_container_width=True, hide_index=True)
+                    st.download_button("Download time series (CSV)", trend.to_csv(index=False).encode("utf-8-sig"), "datapilot_time_series.csv", "text/csv")
+            else:
+                st.info("Time analysis needs one date field and one numeric measure.")
+        elif mode == "Distribution":
+            if numeric_cols:
+                measure = st.selectbox("Measure", numeric_cols, key="dist_field")
+                chart = st.selectbox("Distribution view", ["Histogram + box","Violin","ECDF"])
+                if chart == "Histogram + box":
+                    fig = px.histogram(filtered, x=measure, marginal="box", nbins=40, color_discrete_sequence=["#6955e8"])
+                elif chart == "Violin":
+                    fig = px.violin(filtered, y=measure, box=True, points="outliers", color_discrete_sequence=["#21b8b2"])
+                else:
+                    fig = px.ecdf(filtered, x=measure, color_discrete_sequence=["#6955e8"])
+                fig.update_layout(height=430, margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
+                s = pd.to_numeric(filtered[measure], errors="coerce").dropna()
+                if len(s):
+                    stats = numeric_summary(s)
+                    m = st.columns(5)
+                    for col, label, value in zip(m, ["Count","Mean","Median","IQR outliers","90th percentile"], [stats["count"],stats["mean"],stats["median"],stats["iqr_outliers"],stats["p90"]]):
+                        col.metric(label, fmt(value))
+                    st.caption("Statistics are calculated after global filters. Standard deviation is sample-based.")
+            else:
+                st.info("No numeric measures are available. Review detected field roles.")
+        elif mode == "Relationship":
+            if len(numeric_cols) >= 2:
+                a,b = st.columns(2)
+                with a: x = st.selectbox("X measure", numeric_cols, key="rel_x")
+                with b: y = st.selectbox("Y measure", [v for v in numeric_cols if v != x], key="rel_y")
+                color_options = ["None"] + category_cols
+                color = st.selectbox("Color by dimension (optional)", color_options)
+                plot_data = filtered.copy()
+                plot_data[x] = pd.to_numeric(plot_data[x], errors="coerce")
+                plot_data[y] = pd.to_numeric(plot_data[y], errors="coerce")
+                plot_data = plot_data.dropna(subset=[x,y])
+                if color != "None":
+                    fig = px.scatter(plot_data, x=x, y=y, color=color, opacity=.75)
+                else:
+                    fig = px.scatter(plot_data, x=x, y=y, opacity=.75, color_discrete_sequence=["#6955e8"])
+                fig.update_traces(marker={"size":9,"line":{"width":1,"color":"white"}})
+                fig.update_layout(height=450, hovermode="closest", margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
+                corr, n = safe_correlation(plot_data, x, y)
+                if corr is not None:
+                    st.metric("Pearson correlation", f"{corr:.3f}", f"{n:,} paired observations")
+                    st.caption("Correlation describes linear association, not causation. Inspect the scatter plot for clusters and influential observations.")
+            else:
+                st.info("Relationship analysis requires at least two numeric measures.")
+        elif mode == "Category composition":
+            if category_cols:
+                dim = st.selectbox("Category field", category_cols)
+                counts = category_summary(filtered[dim], top_n=20).rename(columns={"category": dim})
+                chart = st.selectbox("Composition view", ["Donut","Treemap","Bar"])
+                if chart == "Donut":
+                    fig = px.pie(counts, names=dim, values="records", hole=.58)
+                elif chart == "Treemap":
+                    fig = px.treemap(counts, path=[dim], values="records", color="records", color_continuous_scale="Tealgrn")
+                else:
+                    fig = px.bar(counts.sort_values("records"), x="records", y=dim, orientation="h", color="records", color_continuous_scale=["#c7c0fb","#6955e8"])
+                fig.update_layout(height=430, margin=dict(t=20,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
+                st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
+                st.dataframe(counts, use_container_width=True, hide_index=True)
+            else:
+                st.info("No category or identifier fields are available.")
+
+    # ── Data Explorer ──────────────────────────────────────────────────────────
+    elif page == "Data Explorer":
+        st.markdown("## Data Explorer")
+        st.caption("Inspect source records, search values, understand field roles and trace every filtered result back to rows.")
+        a,b,c = st.columns([1.2,1,1])
+        with a: search = st.text_input("Search across text fields", placeholder="Type a value, label or identifier…")
+        with b: selected_columns = st.multiselect("Visible columns", list(data.columns), default=list(data.columns[:min(12,len(data.columns))]))
+        with c: row_limit = st.selectbox("Rows per view", [50,100,250,500,1000,5000], index=2)
+        view = filtered.copy()
+        if search:
+            mask = view.astype("string").apply(lambda s: s.str.contains(re.escape(search), case=False, na=False, regex=True)).any(axis=1)
+            view = view[mask]
+        if selected_columns:
+            view = view[selected_columns]
+        st.markdown(f"**{len(view):,} matching rows**")
+        st.dataframe(view.head(row_limit), use_container_width=True, hide_index=True, height=510)
+        st.download_button("Export current view as CSV", view.to_csv(index=False).encode("utf-8-sig"), "datapilot_explorer_view.csv", "text/csv")
+        st.markdown("### Field dictionary")
+        dictionary = pd.DataFrame(profile.columns)
+        st.dataframe(dictionary, use_container_width=True, hide_index=True)
+        st.markdown("### Missingness map")
+        missing = data.isna().mean().mul(100).sort_values(ascending=False)
+        missing = missing[missing > 0]
+        if len(missing):
+            mdf = missing.rename("Missing %").reset_index().rename(columns={"index":"Field"})
+            fig = px.bar(mdf, x="Missing %", y="Field", orientation="h", color="Missing %", color_continuous_scale=["#21b8b2","#6955e8"])
+            fig.update_layout(height=max(260,len(mdf)*34), margin=dict(t=10,b=10,l=10,r=10), coloraxis_showscale=False)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.success("All source fields are complete.")
+
+    # ── Reports ─────────────────────────────────────────────────────────────────
+    elif page == "Reports":
+        st.markdown("## Reports & exports")
+        st.caption("Build a portable report from the current data and filter state. Report figures are computed, not generated from invented context.")
+        report_title = st.text_input("Report title", value=f"{profile.dataset_kind} analysis")
+        report_findings = profile.insights[:12]
+        html = to_html_report(report_title, upload.name, profile, data, filtered, report_findings, st.session_state.workspace_name)
+        x1,x2,x3 = st.columns(3)
+        with x1:
+            st.download_button("Download executive report (HTML)", html.encode("utf-8"), "datapilot_executive_report.html", "text/html", use_container_width=True, type="primary")
+        with x2:
+            st.download_button("Download workbook (XLSX)", excel_export(data, profile, filtered), "datapilot_analysis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        with x3:
+            payload = {"dataset":upload.name,"kind":profile.dataset_kind,"rows":len(data),"filtered_rows":len(filtered),"quality":profile.quality,"field_profile":profile.columns,"findings":profile.insights,"filters":st.session_state.active_filters}
+            st.download_button("Download analysis profile (JSON)", json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8"), "datapilot_profile.json", "application/json", use_container_width=True)
+        st.markdown("### Report preview")
+        st.markdown(f'<div class="card"><div class="card-label">EXECUTIVE REPORT</div><div class="card-title">{report_title}</div><div class="card-copy">{profile.dataset_kind} · {len(filtered):,} filtered rows · {len(profile.insights):,} evidence-led findings · includes field profile, key measures, quality checks and method caveats.</div></div>', unsafe_allow_html=True)
+        for item in report_findings[:5]:
+            st.markdown(f'<div class="insight"><div class="kind">{item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p></div>', unsafe_allow_html=True)
+        st.info("PDF export, scheduled delivery and saved report history are not included yet. HTML and Excel exports are available now.")
+
+    # ── Settings ────────────────────────────────────────────────────────────────
+    elif page == "Settings":
+        st.markdown("## Workspace settings")
+        st.caption("Control the current workspace presentation and analysis defaults. These settings are session-local.")
+        left,right = st.columns(2, gap="large")
+        with left:
+            st.markdown("### Identity")
+            st.text_input("Workspace name", key="workspace_name", max_chars=48)
+            st.text_input("Workspace subtitle", value="ADAPTIVE DATA INTELLIGENCE", key="workspace_subtitle")
+            st.markdown("### Appearance")
+            st.text_input("Brand mark / initials", key="workspace_mark", max_chars=3)
+            st.selectbox("Accent palette", ["Violet","Ocean","Emerald","Amber"], key="accent_palette")
+            st.selectbox("Theme", ["Light","Dark"], key="theme_mode")
+            st.selectbox("Density", ["Comfortable","Compact"], key="density")
+        with right:
+            st.markdown("### Analysis defaults")
+            st.selectbox("Default chart preference", ["Recommended","Bars","Line","Scatter","Table"], key="chart_type")
+            st.selectbox("Number precision", [0,1,2,3,4], index=2, key="precision")
+            st.selectbox("Default Top N", [5,10,12,20,30,50], index=2, key="default_top_n")
+            st.markdown("### Privacy & data handling")
+            st.info("Uploads are analyzed in the active app session. This build does not provide account login, persistent cloud projects, shared workspaces or external AI processing.")
+            st.checkbox("Show methodology notes in reports", value=True, key="show_method_notes")
+        st.markdown("---")
+        if st.button("Reset workspace preferences"):
+            for key, value in defaults.items():
+                st.session_state[key] = value
+            st.rerun()
+        st.caption("Persistent identity, custom logo uploads and cross-device settings require an authenticated storage layer; this page does not pretend those backend capabilities exist.")
+
+    st.markdown('<div class="sectionline"></div><div class="subtle">DataPilot AI · Adaptive analysis, transparent calculations and evidence-led exploration. No fabricated causes, forecasts or business assumptions.</div>', unsafe_allow_html=True)
