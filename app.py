@@ -14,6 +14,7 @@ import streamlit as st
 
 from universal_engine import profile_dataset, grouped_summary, time_summary
 from time_intelligence import analyze_time_series
+from domain_intelligence import assess_domain
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
@@ -388,6 +389,26 @@ if upload is not None:
     date_cols = list(dict.fromkeys(date_cols))
     id_cols = list(dict.fromkeys(id_cols))
 
+    # Domain lens is inferred from schema evidence and can be corrected by the user.
+    domain_options = ["Automatic", "Sales & commerce", "Customer & audience", "People & workforce", "Finance & accounting", "Marketing & acquisition", "Operations & service", "General / mixed data"]
+    if "domain_override" not in st.session_state:
+        st.session_state["domain_override"] = "Automatic"
+    selected_domain_override = st.sidebar.selectbox(
+        "Dataset domain lens",
+        domain_options,
+        key="domain_override",
+        help="Automatic uses column-name and field-role evidence. You can override the lens; unavailable templates remain disabled.",
+    )
+    domain_assessment = assess_domain(
+        data,
+        profile.columns,
+        numeric_cols,
+        category_cols,
+        date_cols,
+        override=selected_domain_override,
+    )
+    profile.dataset_kind = domain_assessment["domain"]
+
     # Build a profile view that respects role corrections.
     profile.numeric_columns = numeric_cols
     profile.categorical_columns = category_cols
@@ -432,6 +453,30 @@ if upload is not None:
         k[2].metric("Measures", f"{len(numeric_cols):,}")
         k[3].metric("Date fields", f"{len(date_cols):,}")
         k[4].metric("Missing cells", f"{int(data.isna().sum().sum()):,}", f"{profile.quality['missing_pct']}% of source cells")
+        st.markdown("## Adaptive domain understanding")
+        domain_left, domain_right = st.columns([1.15, .85], gap="large")
+        with domain_left:
+            st.markdown(f'<div class="card"><div class="card-label">DATASET LENS · {"USER SELECTED" if domain_assessment["is_overridden"] else "AUTOMATIC"}</div><div class="card-title">{domain_assessment["domain"]}</div><div class="card-copy">{domain_assessment["description"]}</div></div>', unsafe_allow_html=True)
+            if domain_assessment["is_overridden"]:
+                st.caption(f"Automatic schema assessment: {domain_assessment['automatic_domain']}. The selected lens is a user override.")
+            elif domain_assessment["confidence"]:
+                st.caption(f"Schema-evidence confidence: {domain_assessment['confidence']}% · not a statistical probability.")
+            else:
+                st.caption("No specialist domain had enough distinct schema evidence; the general analysis lens is used.")
+        with domain_right:
+            evidence_columns = domain_assessment["evidence_columns"]
+            st.markdown("**Evidence fields**")
+            st.write(", ".join(evidence_columns[:8]) if evidence_columns else "No specialist evidence fields detected.")
+        st.markdown("### Analysis playbook")
+        st.caption("Templates are enabled only when the required field roles exist in this dataset. They are analysis suggestions, not assumed business facts.")
+        for template in domain_assessment["templates"]:
+            with st.container(border=True):
+                status = "AVAILABLE" if template["available"] else "NEEDS MORE FIELDS"
+                st.markdown(f"**{template['title']}** · {status}")
+                st.write(template["question"])
+                st.caption(template["why"])
+                if template["required_fields"]:
+                    st.caption("Fields: " + ", ".join(template["required_fields"]))
         st.markdown("## Intelligence brief")
         st.caption("Evidence-led observations from the current dataset. These are patterns to investigate, not claims about causes.")
         for item in profile.insights[:8]:
