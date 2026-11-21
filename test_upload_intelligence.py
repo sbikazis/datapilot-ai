@@ -29,10 +29,9 @@ def test_non_utf8_csv_uses_windows_encoding_without_loss():
     assert meta["encoding"] == "cp1252"
 
 
-def test_malformed_csv_rows_are_reported_and_not_silently_skipped():
-    _, meta = read_dataset_upload("broken.csv", b"a,b\n1,2\n3,4,5\n")
-    assert meta["irregular_rows"] == 1
-    assert any("different number of fields" in warning for warning in meta["warnings"])
+def test_malformed_csv_rows_are_rejected_instead_of_silently_skipped():
+    with pytest.raises(ValueError, match="No rows were discarded"):
+        read_dataset_upload("broken.csv", b"a,b\n1,2\n3,4,5\n")
 
 
 def test_json_records_are_normalized_and_nested_values_are_disclosed():
