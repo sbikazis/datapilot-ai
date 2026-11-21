@@ -95,6 +95,11 @@ def read_dataset_upload(
         text, encoding = _choose_text_encoding(payload)
         delimiter = _choose_delimiter(text, extension)
         headers, irregular = _csv_structure(text, delimiter)
+        if irregular:
+            raise ValueError(
+                f"{irregular:,} non-empty row(s) have a different number of fields from the header. "
+                "No rows were discarded; correct the source file or export it again."
+            )
         try:
             frame = pd.read_csv(StringIO(text), sep=delimiter)
         except pd.errors.ParserError as exc:
@@ -105,10 +110,6 @@ def read_dataset_upload(
             "raw_headers": headers,
             "irregular_rows": irregular,
         })
-        if irregular:
-            metadata["warnings"].append(
-                f"{irregular:,} non-empty row(s) have a different number of fields from the header. The file needs review."
-            )
 
     if frame.empty:
         metadata["warnings"].append("No data rows were found after reading the header.")
