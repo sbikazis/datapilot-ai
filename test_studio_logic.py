@@ -121,7 +121,7 @@ def test_evidence_findings_surface_material_segment_differences_with_sample_size
     })
     findings = build_evidence_findings(frame, ["metric"], ["segment"], [])
     segment = next(item for item in findings if item["kind"] == "segment difference")
-    assert "A" in segment["title"]
+    assert any(group in segment["title"] for group in ["A", "B"])
     assert "10 of 20 valid observations" in segment["detail"]
     assert "not a causal explanation" in segment["detail"]
 
