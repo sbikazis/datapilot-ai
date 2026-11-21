@@ -115,3 +115,10 @@ Remaining work: user-editable units and semantic types, locale-aware numeric par
 Workspace settings now include an optional uploaded logo (session-only), workspace name/subtitle, mark/initials, four accent palettes, light/dark theme, density, default analysis view, Top N, numeric precision and a report methodology toggle. These controls are wired to the interface and report generation rather than being decorative settings. Reset runs through a safe session-state callback.
 
 Persistent settings, cloud identity and cross-device logo storage remain intentionally unimplemented until a secure account/storage layer exists.
+
+
+## Implementation checkpoint — Evidence-ranked segment discovery
+
+The insight engine now compares numeric measures across categorical segments. It reports group medians against the overall baseline, includes valid sample sizes and suppresses comparisons where groups are too small. The explanation explicitly labels the result as descriptive rather than causal. Regression tests cover both a material difference and a tiny-group case.
+
+Next: time-window change detection with comparison baselines, multiple-testing safeguards, richer distribution shape diagnostics and user-controlled insight thresholds.
