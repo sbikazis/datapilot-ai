@@ -16,6 +16,7 @@ from universal_engine import profile_dataset, grouped_summary, time_summary
 from time_intelligence import analyze_time_series
 from domain_intelligence import assess_domain
 from recommendation_engine import rank_findings, build_next_questions
+from report_intelligence import build_report_data, render_html_report, report_workbook_sheets
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
@@ -201,39 +202,27 @@ def recommend_chart(frame, numeric, categorical, dates):
         return "Distribution", "A numeric measure supports a distribution view."
     return "Category frequency", "Categorical fields support frequency and composition analysis."
 
-def to_html_report(title, filename, profile, frame, filtered, findings, workspace, include_method_notes=True, precision=2):
-    metrics = []
-    for col in profile.numeric_columns[:8]:
-        s = pd.to_numeric(filtered[col], errors="coerce").dropna()
-        if len(s):
-            metrics.append(f"<tr><td>{escape(col)}</td><td>{len(s):,}</td><td>{s.sum():,.{precision}f}</td><td>{s.mean():,.{precision}f}</td><td>{s.median():,.{precision}f}</td></tr>")
-    insight_html = "".join(
-        f"<article><small>{escape(x['kind'])}</small><h3>{escape(x['title'])}</h3><p>{escape(x['detail'])}</p><p class='muted'>Next: {escape(x['action'])}</p></article>"
-        for x in findings
+def to_html_report(title, filename, profile, frame, filtered, findings, workspace, include_method_notes=True, precision=2, next_questions=None, filters=None):
+    report = build_report_data(
+        frame, filtered, profile.numeric_columns, profile.columns, profile.quality,
+        findings, next_questions or [], filters or {},
+        title=title, dataset=filename, domain=profile.dataset_kind,
+        workspace=workspace, precision=precision,
     )
-    method_html = "<h2>Method and limitations</h2><p>Findings describe observed patterns and statistical associations. They do not establish causes, forecasts or missing business facts. Review detected field roles and data quality before making decisions.</p>" if include_method_notes else ""
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{escape(title)}</title>
-<style>
-body{{font:15px/1.6 Arial,sans-serif;background:#f4f6fb;color:#1d2942;margin:0;padding:36px}}
-main{{max-width:1050px;margin:auto;background:white;border:1px solid #e4e8f1;border-radius:20px;padding:38px}}
-header{{background:linear-gradient(110deg,#111a30,#514995);color:white;padding:26px;border-radius:15px}}
-h1{{margin:0}}header p{{color:#dce2f7}}h2{{margin-top:32px}}article{{border-left:4px solid #7561e6;background:#fafaff;padding:12px 17px;margin:12px 0;border-radius:9px}}
-small{{color:#705cdb;text-transform:uppercase;font-weight:bold;letter-spacing:1px}}.muted{{color:#75819a;font-size:13px}}
-table{{border-collapse:collapse;width:100%;margin-top:12px}}td,th{{border-bottom:1px solid #e6eaf2;text-align:left;padding:10px}}th{{background:#f6f7fb}}
-</style></head><body><main><header><h1>{escape(title)}</h1><p>{escape(workspace)} · {escape(filename)}</p><p>Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} · {len(filtered):,} filtered of {len(frame):,} source rows</p></header>
-<h2>Executive snapshot</h2><p>{profile.dataset_kind} · {len(frame):,} rows · {len(frame.columns):,} fields · {profile.quality['missing_cells']:,} missing cells · {profile.quality['duplicate_rows']:,} exact duplicate rows</p>
-<h2>Key measures</h2><table><tr><th>Measure</th><th>Valid</th><th>Total</th><th>Average</th><th>Median</th></tr>{''.join(metrics)}</table>
-<h2>Evidence-led findings</h2>{insight_html}
-{method_html}
-<p class='muted'>DataPilot AI · Adaptive Data Intelligence</p></main></body></html>"""
+    return render_html_report(report, include_method_notes=include_method_notes)
 
-def excel_export(frame, profile, filtered):
+
+def excel_export(frame, profile, filtered, report=None):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         frame.to_excel(writer, sheet_name="Analyzed data", index=False)
         filtered.to_excel(writer, sheet_name="Filtered data", index=False)
-        pd.DataFrame(profile.columns).to_excel(writer, sheet_name="Field profile", index=False)
-        pd.DataFrame(profile.insights).to_excel(writer, sheet_name="Findings", index=False)
+        if report is None:
+            pd.DataFrame(profile.columns).to_excel(writer, sheet_name="Field profile", index=False)
+            pd.DataFrame(profile.insights).to_excel(writer, sheet_name="Findings", index=False)
+        else:
+            for sheet_name, table in report_workbook_sheets(report).items():
+                table.to_excel(writer, sheet_name=sheet_name[:31], index=False)
     return output.getvalue()
 
 # ── Sidebar shell ───────────────────────────────────────────────────────────
@@ -738,20 +727,40 @@ if upload is not None:
         st.caption("Build a portable report from the current data and filter state. Report figures are computed, not generated from invented context.")
         report_title = st.text_input("Report title", value=f"{profile.dataset_kind} analysis")
         report_findings = profile.insights[:12]
-        html = to_html_report(report_title, upload.name, profile, data, filtered, report_findings, st.session_state.workspace_name, include_method_notes=st.session_state.get("show_method_notes", True), precision=st.session_state.get("precision", 2))
+        report_data = build_report_data(
+            data, filtered, numeric_cols, profile.columns, profile.quality,
+            report_findings, next_questions, st.session_state.active_filters,
+            title=report_title, dataset=upload.name, domain=profile.dataset_kind,
+            workspace=st.session_state.workspace_name,
+            precision=st.session_state.get("precision", 2),
+        )
+        html = render_html_report(report_data, include_method_notes=st.session_state.get("show_method_notes", True))
         x1,x2,x3 = st.columns(3)
         with x1:
             st.download_button("Download executive report (HTML)", html.encode("utf-8"), "datapilot_executive_report.html", "text/html", use_container_width=True, type="primary")
         with x2:
-            st.download_button("Download workbook (XLSX)", excel_export(data, profile, filtered), "datapilot_analysis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+            st.download_button("Download workbook (XLSX)", excel_export(data, profile, filtered, report_data), "datapilot_executive_report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         with x3:
-            payload = {"dataset":upload.name,"kind":profile.dataset_kind,"rows":len(data),"filtered_rows":len(filtered),"quality":profile.quality,"field_profile":profile.columns,"findings":profile.insights,"next_questions":next_questions,"filters":st.session_state.active_filters}
-            st.download_button("Download analysis profile (JSON)", json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8"), "datapilot_profile.json", "application/json", use_container_width=True)
-        st.markdown("### Report preview")
-        st.markdown(f'<div class="card"><div class="card-label">EXECUTIVE REPORT</div><div class="card-title">{report_title}</div><div class="card-copy">{profile.dataset_kind} · {len(filtered):,} filtered rows · {len(profile.insights):,} evidence-led findings · includes field profile, key measures, quality checks and method caveats.</div></div>', unsafe_allow_html=True)
-        for item in report_findings[:5]:
-            st.markdown(f'<div class="insight"><div class="kind">{item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p></div>', unsafe_allow_html=True)
-        st.info("PDF export, scheduled delivery and saved report history are not included yet. HTML and Excel exports are available now.")
+            st.download_button("Download analysis profile (JSON)", json.dumps(report_data, ensure_ascii=False, indent=2, default=str).encode("utf-8"), "datapilot_executive_report.json", "application/json", use_container_width=True)
+        st.markdown("### Executive report preview")
+        preview_left, preview_right = st.columns(2)
+        with preview_left:
+            st.metric("Rows in current view", f"{report_data['filtered_rows']:,}", f"of {report_data['source_rows']:,} source rows")
+            st.metric("Missing cells", f"{report_data['quality']['missing_cells']:,}", f"{report_data['quality']['missing_pct']:.1f}% of source cells")
+        with preview_right:
+            st.metric("Priority findings", f"{len(report_data['findings']):,}")
+            st.metric("Follow-up questions", f"{len(report_data['next_questions']):,}")
+        st.markdown("#### Key measures")
+        if report_data["metrics"]:
+            st.dataframe(pd.DataFrame(report_data["metrics"]), use_container_width=True, hide_index=True)
+        else:
+            st.info("No numeric measures are available for a metric summary.")
+        st.markdown("#### Priority findings")
+        for item in report_data["findings"][:5]:
+            st.markdown(f'<div class="insight"><div class="kind">{item.get("evidence_level", item.get("kind", "Observation"))} · {item.get("priority_score", "—")}/100</div><strong>{item.get("title", "Observation")}</strong><p>{item.get("detail", "")}</p><div class="next">NEXT STEP → {item.get("next_step", item.get("action", ""))}</div></div>', unsafe_allow_html=True)
+        st.markdown("#### Workbook contents")
+        st.caption("Analyzed data · Filtered data · Executive summary · Key measures · Priority findings · Data quality · Field dictionary · Next questions · Applied filters")
+        st.info("HTML is print-friendly and can be saved as PDF from your browser. A native PDF export, scheduled delivery and saved report history are not included yet.")
 
     # ── Settings ────────────────────────────────────────────────────────────────
     elif page == "Settings":
