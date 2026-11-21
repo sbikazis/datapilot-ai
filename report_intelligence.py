@@ -22,6 +22,9 @@ def build_report_data(
     dataset: str = "Dataset",
     domain: str = "General / mixed data",
     workspace: str = "My workspace",
+    prepared_for: str = "",
+    prepared_by: str = "",
+    analyst_note: str = "",
     generated_at: str | None = None,
     precision: int = 2,
 ) -> dict[str, Any]:
@@ -62,6 +65,9 @@ def build_report_data(
         "dataset": str(dataset),
         "domain": str(domain),
         "workspace": str(workspace),
+        "prepared_for": str(prepared_for).strip()[:120],
+        "prepared_by": str(prepared_by).strip()[:80],
+        "analyst_note": str(analyst_note).strip()[:1200],
         "generated_at": generated_at or datetime.now().astimezone().isoformat(timespec="minutes"),
         "source_rows": int(len(source)),
         "filtered_rows": int(len(filtered)),
@@ -151,7 +157,7 @@ article{{border:1px solid var(--line);border-left:4px solid var(--violet);border
 </style></head><body><main>
 <header><div class="eyebrow">DATAPILOT AI · EXECUTIVE INTELLIGENCE</div><h1>{esc(report['title'])}</h1>
 <p>{esc(report['workspace'])} · {esc(report['dataset'])} · {esc(report['domain'])}</p>
-<p>Generated {esc(report['generated_at'])} · {report['filtered_rows']:,} of {report['source_rows']:,} source rows in view</p></header>
+<p>{'Prepared for ' + esc(report.get('prepared_for')) + ' · ' if report.get('prepared_for') else ''}{'Prepared by ' + esc(report.get('prepared_by')) + ' · ' if report.get('prepared_by') else ''}Generated {esc(report['generated_at'])} · {report['filtered_rows']:,} of {report['source_rows']:,} source rows in view</p></header>
 <div class="kpis">
 <div class="kpi"><small>Rows in view</small><strong>{report['filtered_rows']:,}</strong></div>
 <div class="kpi"><small>Fields</small><strong>{report['field_count']:,}</strong></div>
@@ -159,6 +165,7 @@ article{{border:1px solid var(--line);border-left:4px solid var(--violet);border
 <div class="kpi"><small>Duplicate rows</small><strong>{report['quality']['duplicate_rows']:,}</strong></div>
 </div>
 <section><h2>Executive summary</h2><p>The current view contains <b>{report['filtered_rows']:,}</b> rows across <b>{report['field_count']:,}</b> fields. The dataset is classified under <b>{esc(report['domain'])}</b>. {len(report['findings'])} evidence-led findings and {len(report['next_questions'])} follow-up questions are included below.</p></section>
+{'<section><h2>Analyst note</h2><p>' + esc(report.get('analyst_note')) + '</p><p class="muted">Provided by the report author; not inferred from the dataset.</p></section>' if report.get('analyst_note') else ''}
 <section><h2>Key measures</h2><table><thead><tr><th>Measure</th><th>Valid</th><th>Total</th><th>Average</th><th>Median</th><th>Range</th></tr></thead><tbody>{metric_rows}</tbody></table></section>
 <section><h2>Priority findings</h2>{findings_html}</section>
 <section><h2>Data quality</h2><p>{report['quality']['missing_pct']:.1f}% of source cells are missing. Constant fields: {esc(', '.join(report['quality']['constant_columns']) or 'None detected')}.</p><table><thead><tr><th>Field</th><th>Missing</th><th>Missing %</th></tr></thead><tbody>{missing_rows}</tbody></table></section>
@@ -173,7 +180,8 @@ def report_workbook_sheets(report: dict[str, Any]) -> dict[str, pd.DataFrame]:
     return {
         "Executive summary": pd.DataFrame([{
             "title": report["title"], "dataset": report["dataset"], "domain": report["domain"],
-            "generated_at": report["generated_at"], "source_rows": report["source_rows"],
+            "generated_at": report["generated_at"], "prepared_for": report.get("prepared_for", ""),
+            "prepared_by": report.get("prepared_by", ""), "analyst_note": report.get("analyst_note", ""), "source_rows": report["source_rows"],
             "filtered_rows": report["filtered_rows"], "field_count": report["field_count"],
             **{**report["quality"], "constant_columns": ", ".join(report["quality"]["constant_columns"])},
         }]),
