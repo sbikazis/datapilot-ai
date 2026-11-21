@@ -54,7 +54,7 @@ def test_empty_dataset_is_rejected():
 def test_time_summary_handles_invalid_dates_and_all_null_measures():
     frame = pd.DataFrame({
         "when": ["2026-01-01", "not-a-date", "2026-02-01"],
-        "value": [5, 9, None],
+        "value": [None, 9, None],
     })
     result = time_summary(frame, "when", "value", "Month", "sum")
     assert result.empty
