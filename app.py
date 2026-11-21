@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from html import escape
-from io import BytesIO, StringIO
+from io import BytesIO
 import json
 import re
 
@@ -21,6 +21,22 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Session state ──────────────────────────────────────────────────────────
+defaults = {
+    "workspace_name": "My workspace",
+    "theme_mode": "Light",
+    "density": "Comfortable",
+    "workspace_mark": "◈",
+    "accent_palette": "Violet",
+    "nav_page": "Overview",
+    "active_filters": {},
+    "role_overrides": {},
+    "chart_type": "Recommended",
+}
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 # ── Design system ──────────────────────────────────────────────────────────
 st.markdown("""
@@ -193,22 +209,6 @@ def excel_export(frame, profile, filtered):
         pd.DataFrame(profile.columns).to_excel(writer, sheet_name="Field profile", index=False)
         pd.DataFrame(profile.insights).to_excel(writer, sheet_name="Findings", index=False)
     return output.getvalue()
-
-# ── Session state ──────────────────────────────────────────────────────────
-defaults = {
-    "workspace_name": "My workspace",
-    "theme_mode": "Light",
-    "density": "Comfortable",
-    "workspace_mark": "◈",
-    "accent_palette": "Violet",
-    "nav_page": "Overview",
-    "active_filters": {},
-    "role_overrides": {},
-    "chart_type": "Recommended",
-}
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
 
 # ── Sidebar shell ───────────────────────────────────────────────────────────
 with st.sidebar:
