@@ -951,14 +951,70 @@ if upload is not None:
         st.markdown("### Field dictionary")
         dictionary = pd.DataFrame(profile.columns)
         st.dataframe(dictionary, use_container_width=True, hide_index=True)
+        st.markdown("### Field spotlight")
+        spotlight_field = st.selectbox("Explore a field", list(data.columns), key="explorer_spotlight_field")
+        spotlight = data[spotlight_field]
+        valid = spotlight.dropna()
+        s1, s2, s3 = st.columns(3)
+        s1.metric("Non-empty values", f"{len(valid):,}", f"{len(valid) / max(1, len(data)) * 100:.1f}% of rows")
+        s2.metric("Unique values", f"{spotlight.nunique(dropna=True):,}")
+        s3.metric("Missing values", f"{int(spotlight.isna().sum()):,}")
+        if spotlight_field in numeric_cols:
+            numeric_values = pd.to_numeric(spotlight, errors="coerce").dropna()
+            if not numeric_values.empty:
+                spotlight_fig = px.histogram(
+                    numeric_values, x=numeric_values, nbins=36,
+                    color_discrete_sequence=["#7664e8"],
+                    labels={"x": spotlight_field, "count": "Records"},
+                )
+                spotlight_fig.update_traces(marker_line_width=0, opacity=.88)
+                spotlight_fig.update_layout(height=310, margin=dict(t=20,b=24,l=12,r=12), bargap=.08)
+                st.plotly_chart(spotlight_fig, use_container_width=True, config={"displaylogo":False})
+                st.caption(f"Range {fmt(numeric_values.min())} to {fmt(numeric_values.max())} · median {fmt(numeric_values.median())}")
+        elif spotlight_field in date_cols:
+            date_values = pd.to_datetime(spotlight, errors="coerce").dropna()
+            if not date_values.empty:
+                date_counts = date_values.dt.to_period("M").astype(str).value_counts().sort_index().rename_axis("Period").reset_index(name="Records")
+                spotlight_fig = px.area(date_counts, x="Period", y="Records", markers=True, color_discrete_sequence=["#36bfc9"])
+                spotlight_fig.update_layout(height=310, margin=dict(t=20,b=24,l=12,r=12))
+                st.plotly_chart(spotlight_fig, use_container_width=True, config={"displaylogo":False})
+        else:
+            counts = spotlight.astype("string").fillna("(Missing)").value_counts().head(14).rename_axis("Value").reset_index(name="Records")
+            if not counts.empty:
+                spotlight_fig = px.bar(counts.sort_values("Records"), x="Records", y="Value", orientation="h", color="Records", color_continuous_scale=["#c7c0fb","#7664e8","#36bfc9"])
+                spotlight_fig.update_layout(height=max(280, len(counts)*27), margin=dict(t=20,b=20,l=12,r=12), coloraxis_showscale=False)
+                st.plotly_chart(spotlight_fig, use_container_width=True, config={"displaylogo":False})
+        with st.expander("Inspect source rows for this field"):
+            if spotlight_field in numeric_cols:
+                source_sample = data[data[spotlight_field].isna()]
+                st.caption("Rows with missing values in this field." if not source_sample.empty else "No missing values in this field.")
+            else:
+                source_sample = data[data[spotlight_field].isna()]
+                st.caption("Source rows where this field is missing.")
+            if not source_sample.empty:
+                st.dataframe(source_sample.head(200), use_container_width=True, hide_index=True)
+                st.download_button("Download matching source rows", source_sample.to_csv(index=False).encode("utf-8-sig"), "datapilot_field_source_rows.csv", "text/csv", key="download_spotlight_missing_rows")
+            else:
+                st.success("No missing source rows to inspect for this field.")
+
         st.markdown("### Missingness map")
         missing = data.isna().mean().mul(100).sort_values(ascending=False)
         missing = missing[missing > 0]
         if len(missing):
             mdf = missing.rename("Missing %").reset_index().rename(columns={"index":"Field"})
-            fig = px.bar(mdf, x="Missing %", y="Field", orientation="h", color="Missing %", color_continuous_scale=["#21b8b2","#6955e8"])
+            fig = px.bar(mdf, x="Missing %", y="Field", orientation="h", color="Missing %", color_continuous_scale=["#36bfc9","#7664e8","#e5ae52"])
             fig.update_layout(height=max(260,len(mdf)*34), margin=dict(t=10,b=10,l=10,r=10), coloraxis_showscale=False)
-            st.plotly_chart(fig, use_container_width=True)
+            event = st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, on_select="rerun", selection_mode="points", key="explorer_missingness_chart")
+            selected_fields = selected_point_values(event, ["y"])
+            if selected_fields:
+                field = selected_fields[0]
+                missing_rows = data[data[field].isna()]
+                st.markdown(f"**{escape(str(field))}** · {len(missing_rows):,} source rows have missing values")
+                if not missing_rows.empty:
+                    st.dataframe(missing_rows.head(200), use_container_width=True, hide_index=True)
+                    st.download_button("Download rows with missing values", missing_rows.to_csv(index=False).encode("utf-8-sig"), "datapilot_missing_field_rows.csv", "text/csv", key="download_missing_field_rows")
+            else:
+                st.caption("Select a bar to inspect the exact source rows missing that field.")
         else:
             st.success("All source fields are complete.")
 
