@@ -188,7 +188,7 @@ if upload is not None:
             with ycol: y=st.selectbox("Y axis",[c for c in profile.numeric_columns if c!=x],key="scatter_y")
             color_options=["None"]+profile.categorical_columns
             color=st.selectbox("Color points by (optional)",color_options)
-            fig=px.scatter(data,x=x,y=y,color=None if color=="None" else color,trendline="ols",opacity=.72)
+            fig=px.scatter(data,x=x,y=y,color=None if color=="None" else color,opacity=.72)
             fig.update_layout(height=430,margin=dict(t=20,b=20,l=10,r=10),paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig,use_container_width=True)
         else:
