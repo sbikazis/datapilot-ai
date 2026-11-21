@@ -48,3 +48,24 @@ def test_time_summary_resamples_to_months():
 def test_empty_dataset_is_rejected():
     with pytest.raises(ValueError, match="no rows"):
         profile_dataset(pd.DataFrame())
+
+
+
+def test_time_summary_handles_invalid_dates_and_all_null_measures():
+    frame = pd.DataFrame({
+        "when": ["2026-01-01", "not-a-date", "2026-02-01"],
+        "value": [5, 9, None],
+    })
+    result = time_summary(frame, "when", "value", "Month", "sum")
+    assert result.empty
+    assert list(result.columns) == ["period", "value"]
+
+
+def test_time_summary_accepts_one_valid_row_and_rejects_unsupported_aggregation():
+    frame = pd.DataFrame({"when": ["2026-01-01"], "value": ["7.5"]})
+    result = time_summary(frame, "when", "value", "Day", "sum")
+    assert len(result) == 1
+    assert result.iloc[0]["value"] == 7.5
+
+    with pytest.raises(ValueError, match="Unsupported time aggregation"):
+        time_summary(frame, "when", "value", "Day", "median_absolute_deviation")
