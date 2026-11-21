@@ -127,3 +127,8 @@ Next: time-window change detection with comparison baselines, multiple-testing s
 ## Implementation checkpoint — Adaptive domain intelligence
 
 The domain lens now scores explicit schema-name signals across sales/commerce, customers/audience, workforce, finance/accounting, marketing/acquisition and operations/service. It exposes matched evidence columns and a cautious confidence indicator; ambiguous schemas remain in a general/mixed lens. Users can override the lens without changing source data. Domain-specific analysis playbooks show questions, rationale and required fields, and mark a template available only when its required field roles exist. These are deterministic schema heuristics, not generative AI or proof of business context.
+
+
+## Implementation checkpoint — Evidence-ranked recommendations
+
+The recommendation layer now orders deterministic findings using a documented review-priority heuristic: finding type, sample support stated in the finding, and current filtered-row count. Each displayed finding includes its priority score, evidence label, sample context where available, rationale and next investigative action. The score is explicitly not a probability, confidence interval or significance test. The Overview also suggests concrete next questions only when the necessary numeric, categorical or date roles exist. These questions and ranked findings are included in the JSON analysis export.
