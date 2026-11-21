@@ -165,7 +165,7 @@ def to_html_report(title, filename, profile, frame, filtered, findings, workspac
     for col in profile.numeric_columns[:8]:
         s = pd.to_numeric(filtered[col], errors="coerce").dropna()
         if len(s):
-            metrics.append(f"<tr><td>{col}</td><td>{len(s):,}</td><td>{s.sum():,.3f}</td><td>{s.mean():,.3f}</td><td>{s.median():,.3f}</td></tr>")
+            metrics.append(f"<tr><td>{escape(col)}</td><td>{len(s):,}</td><td>{s.sum():,.3f}</td><td>{s.mean():,.3f}</td><td>{s.median():,.3f}</td></tr>")
     insight_html = "".join(
         f"<article><small>{escape(x['kind'])}</small><h3>{escape(x['title'])}</h3><p>{escape(x['detail'])}</p><p class='muted'>Next: {escape(x['action'])}</p></article>"
         for x in findings
@@ -212,7 +212,7 @@ for key, value in defaults.items():
 
 # ── Sidebar shell ───────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div class="brand"><div class="brandmark">{escape(st.session_state.workspace_mark[:3])}</div><div><div class="brandname">DataPilot AI</div><div class="brandtag">INTELLIGENCE STUDIO</div></div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="brand"><div class="brandmark">{escape(st.session_state.workspace_mark[:3])}</div><div><div class="brandname">DataPilot AI</div><div class="brandtag">INTELLIGENCE STUDIO</div></div></div>', unsafe_allow_html=True)
     st.caption(escape(st.session_state.get("workspace_subtitle", "YOUR DATA. UNDERSTOOD.")))
     st.markdown("---")
     page = st.radio(
@@ -380,6 +380,9 @@ if st.sidebar.button("Clear all filters", use_container_width=True):
     for field in filterable:
         st.session_state.pop(f"global_filter_{field}", None)
     st.rerun()
+
+# Recalculate findings against the active global filter so explanations match the visible records.
+profile.insights = build_evidence_findings(filtered, numeric_cols, category_cols, date_cols)
 
 # Common source context header
 st.markdown(f'<div class="pagehead"><div><div class="kicker">{profile.dataset_kind} · DATASET PROFILE</div><h2 style="margin:3px 0">{upload.name}</h2><div class="subtle">{len(data):,} rows · {len(data.columns):,} fields · recommended starting point: {recommendation}</div></div><span class="pill">LIVE SESSION</span></div>', unsafe_allow_html=True)
