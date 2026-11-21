@@ -146,6 +146,7 @@ def test_full_twenty_row_demo_file_is_fully_accepted_with_expected_totals():
 
 def test_malformed_numeric_value_is_rejected_with_row_reason():
     frame = sample().iloc[:2].copy()
+    frame["Selling Price"] = frame["Selling Price"].astype("string")
     frame.loc[0, "Selling Price"] = "12-3"
     result = analyze_sales(frame)
     assert result.summary["valid_rows"] == 1
