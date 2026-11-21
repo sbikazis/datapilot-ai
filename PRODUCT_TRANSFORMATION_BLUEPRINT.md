@@ -147,3 +147,10 @@ The XLSX export now contains separate sheets for analyzed data, filtered data, e
 A dedicated Guided Analysis workspace now starts from user intent rather than a chart menu. It exposes only objectives supported by detected field roles: measure profiling, group comparison, monthly time movement, numeric relationship review and data-quality review. Each path validates selected fields, handles empty/invalid samples, reports denominators and limitations, and returns supporting source-row indices for drill-down. Group comparisons suppress groups below the chosen minimum sample size; time movement does not fill missing months with zero; relationship results explicitly avoid causal interpretation. Results can be exported as CSV, and supporting records remain inspectable in the active filtered view.
 
 This remains deterministic statistical analysis, not generative AI. Guided analyses are session-local and do not save projects or reports automatically.
+
+
+## Implementation checkpoint — Insight-to-action workspace
+
+The Decisions workspace converts ranked deterministic findings into a structured action register. Each item retains its source observation, priority/evidence label, sample context, matched source columns, suggested validation step and a decision guardrail. Finding types map to cautious investigation language (for example, a segment difference becomes an opportunity to investigate, not a guaranteed business gain). Unknown finding types receive a generic validation step. Users can inspect the original finding and export the register as CSV or JSON. The register is recalculated from the active filtered view and remains session-local.
+
+This layer does not estimate financial impact, prescribe interventions, prove causality or claim generative-AI reasoning. Its purpose is to make the next validation step clearer and auditable.
