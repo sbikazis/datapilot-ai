@@ -4,6 +4,8 @@ The themes are presentation choices only; they never change analysis results.
 """
 from __future__ import annotations
 
+from html import escape
+
 THEMES = {
     "Nebula / sci-fi": {
         "label": "Nebula",
@@ -102,6 +104,17 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
 .kicker,.card-label,.replace-label,.brandtag{color:var(--muted)!important;letter-spacing:.13em;font-weight:750}
 .brandmark{background:linear-gradient(135deg,var(--accent),var(--accent-2))!important;box-shadow:0 6px 22px var(--glow);border-radius:12px}
 .brandname{color:var(--sidebar-text)!important}
+.theme-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:12px 0 18px}
+.theme-preview{min-width:0;padding:11px;border:1px solid var(--line);border-radius:13px;background:var(--surface);transition:transform .18s,border-color .18s,box-shadow .18s}
+.theme-preview:hover{transform:translateY(-2px);box-shadow:0 10px 24px var(--glow)}
+.theme-preview.is-selected{border:2px solid var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.theme-preview-art{height:46px;display:flex;align-items:flex-end;gap:5px;padding:7px;border-radius:8px;background:linear-gradient(120deg,var(--preview-canvas),var(--preview-surface))}
+.theme-preview-art span{display:block;height:22px;flex:1;border-radius:4px;background:var(--preview-accent)}
+.theme-preview-art span:nth-child(2){height:30px;background:var(--preview-accent2)}
+.theme-preview-art span:nth-child(3){height:15px;background:var(--preview-ink)}
+.theme-preview-title{margin-top:9px;font-size:.82rem;font-weight:800;color:var(--text)}
+.theme-preview-mood{margin-top:3px;font-size:.68rem;line-height:1.4;color:var(--muted)}
+@media(max-width:640px){.theme-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .hero{background:radial-gradient(circle at 88% 18%,var(--glow),transparent 32%),linear-gradient(118deg,var(--hero-1),var(--hero-2))!important;border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:22px!important;padding:clamp(22px,3vw,38px)!important;box-shadow:0 20px 55px color-mix(in srgb,var(--hero-1) 20%,transparent);animation:dp-rise .55s ease both}
 .hero:before{content:"";position:absolute;width:240px;height:240px;right:-85px;top:-105px;border:1px solid color-mix(in srgb,var(--sidebar-text) 20%,transparent);border-radius:50%;box-shadow:0 0 0 24px color-mix(in srgb,var(--sidebar-text) 4%),0 0 0 50px color-mix(in srgb,var(--sidebar-text) 3%)}
 .hero .eyebrow{color:color-mix(in srgb,var(--accent-2) 70%,white);font-size:.7rem;letter-spacing:.16em;font-weight:800}
@@ -140,3 +153,21 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
     for key, value in tokens.items():
         css = css.replace(key, value)
     return css
+
+
+def theme_gallery_html(choice: str, domain: str = "General / mixed data") -> str:
+    """Render compact theme previews so visual choices are understandable before selection."""
+    active = resolve_theme(choice, domain)["label"]
+    cards = []
+    for name, theme in THEMES.items():
+        colors = theme["light"]
+        selected = " is-selected" if theme["label"] == active else ""
+        cards.append(
+            f'<div class="theme-preview{selected}" style="--preview-canvas:{colors["canvas"]};'
+            f'--preview-surface:{colors["surface"]};--preview-accent:{colors["accent"]};'
+            f'--preview-accent2:{colors["accent_2"]};--preview-ink:{colors["text"]}">'
+            f'<div class="theme-preview-art"><span></span><span></span><span></span></div>'
+            f'<div class="theme-preview-title">{escape(theme["label"])}</div>'
+            f'<div class="theme-preview-mood">{escape(theme["mood"])}</div></div>'
+        )
+    return '<div class="theme-gallery">' + "".join(cards) + '</div>'
