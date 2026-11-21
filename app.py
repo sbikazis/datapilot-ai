@@ -50,6 +50,11 @@ def reset_workspace_preferences():
     for key, value in defaults.items():
         st.session_state[key] = value
 
+
+def apply_analysis_defaults():
+    st.session_state.pop("studio_mode", None)
+    st.session_state.pop("cmp_limit", None)
+
 # ── Design system ──────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -476,7 +481,7 @@ if upload is not None:
                 with a: dimension = st.selectbox("Dimension", category_cols, key="cmp_dimension")
                 with b: measure = st.selectbox("Measure", numeric_cols, key="cmp_measure")
                 with c: agg = st.selectbox("Aggregation", ["sum","mean","median","min","max","count"], key="cmp_agg")
-                limit = st.slider("Show groups", 3, 40, int(st.session_state.get("default_top_n", 12)), key="cmp_limit")
+                limit = st.slider("Show groups", 3, 50, int(st.session_state.get("default_top_n", 12)), key="cmp_limit")
                 summary = grouped_summary(filtered, dimension, measure, agg).head(limit)
                 if summary.empty:
                     st.info("No rows remain for this comparison. Adjust the global filters.")
@@ -689,9 +694,9 @@ if upload is not None:
             st.selectbox("Density", ["Comfortable","Compact"], key="density")
         with right:
             st.markdown("### Analysis defaults")
-            st.selectbox("Default analysis view", ["Recommended","Compare groups","Time trend","Distribution","Relationship","Category composition"], key="chart_type")
+            st.selectbox("Default analysis view", ["Recommended","Compare groups","Time trend","Distribution","Relationship","Category composition"], key="chart_type", on_change=apply_analysis_defaults)
             st.selectbox("Number precision", [0,1,2,3,4], index=2, key="precision")
-            st.selectbox("Default Top N", [5,10,12,20,30,50], index=2, key="default_top_n")
+            st.selectbox("Default Top N", [5,10,12,20,30,50], index=2, key="default_top_n", on_change=apply_analysis_defaults)
             st.markdown("### Privacy & data handling")
             st.info("Uploads are analyzed in the active app session. This build does not provide account login, persistent cloud projects, shared workspaces or external AI processing.")
             st.checkbox("Show methodology notes in reports", value=True, key="show_method_notes")
