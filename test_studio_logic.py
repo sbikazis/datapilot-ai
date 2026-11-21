@@ -109,3 +109,29 @@ def test_selected_point_indices_extracts_unique_valid_rows():
         {"point_index": -1}, {"point_index": "bad"}, {},
     ]}}
     assert selected_point_indices(event) == [4, 2]
+
+
+
+def test_evidence_findings_surface_material_segment_differences_with_sample_sizes():
+    from studio_logic import build_evidence_findings
+
+    frame = pd.DataFrame({
+        "segment": ["A"] * 10 + ["B"] * 10,
+        "metric": [100.0] * 10 + [10.0] * 10,
+    })
+    findings = build_evidence_findings(frame, ["metric"], ["segment"], [])
+    segment = next(item for item in findings if item["kind"] == "segment difference")
+    assert any(group in segment["title"] for group in ["A", "B"])
+    assert "10 of 20 valid observations" in segment["detail"]
+    assert "not a causal explanation" in segment["detail"]
+
+
+def test_evidence_findings_suppress_segment_differences_from_tiny_groups():
+    from studio_logic import build_evidence_findings
+
+    frame = pd.DataFrame({
+        "segment": ["main"] * 19 + ["tiny"],
+        "metric": [10.0] * 19 + [1000.0],
+    })
+    findings = build_evidence_findings(frame, ["metric"], ["segment"], [])
+    assert not any(item["kind"] == "segment difference" for item in findings)
