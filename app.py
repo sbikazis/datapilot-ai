@@ -264,11 +264,30 @@ if st.session_state.theme_mode == "Dark":
     .loaded-dataset{background:#192238!important;border-color:#2c5b51!important}
     .overview-live{background:#17352f!important;border-color:#285c50!important;color:#a5e4cf!important}
     .signal-meta span{background:#29354f!important;color:#c0c9df!important}
+    .pagehead,.upload-panel,.upload-guidance,.signal-card{background:#192238!important;border-color:#2c3854!important}
+    .upload-panel h2,.upload-guidance .card-label,.pagehead h2{color:#edf0ff!important}
+    .upload-panel p,.upload-guidance .card-copy,.pagehead .subtle{color:#aab5ce!important}
+    .format-list span{background:#29354f!important;color:#c0c9df!important;border-color:#3b4866!important}
+    [data-testid="stMetric"]{background:linear-gradient(145deg,#1b2945,#192238)!important}
+    [data-testid="stPlotlyChart"]{background:#192238!important}
     .stTextInput input,.stSelectbox div[data-baseweb="select"],.stMultiSelect div[data-baseweb="select"]{background:#192238;color:#edf0ff}
     [data-testid="stMetricValue"]{color:#edf0ff}
     [data-testid="stMetricLabel"]{color:#aab5ce!important}
     </style>
     """, unsafe_allow_html=True)
+# Keep Plotly visuals consistent with the scientific / nebula design language.
+plot_text = "#dce6ff" if st.session_state.theme_mode == "Dark" else "#53617d"
+plot_grid = "rgba(190,202,232,.14)" if st.session_state.theme_mode == "Dark" else "rgba(114,132,177,.14)"
+px.defaults.color_discrete_sequence = ["#7664e8", "#36bfc9", "#4f91df", "#e5ae52", "#d879a8", "#6ab89d"]
+px.defaults.color_continuous_scale = ["#d9d5ff", "#9382f4", "#4ccbd2", "#236c9b"]
+px.defaults.template = go.layout.Template(layout=go.Layout(
+    font=dict(family="DM Sans, sans-serif", color=plot_text),
+    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+    xaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
+    yaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
+    colorway=["#7664e8", "#36bfc9", "#4f91df", "#e5ae52", "#d879a8", "#6ab89d"],
+))
+
 if st.session_state.density == "Compact":
     st.markdown("<style>.block-container{padding-top:.8rem;padding-bottom:2rem}[data-testid='stMetric']{min-height:84px;padding:10px 13px}.card,.insight{padding:12px 14px;margin-bottom:7px}</style>", unsafe_allow_html=True)
 
