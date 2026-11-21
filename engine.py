@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from typing import BinaryIO
+import math
 import re
 
 import pandas as pd
@@ -46,8 +47,10 @@ def map_columns(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
 def load_sales_file(file: str | BinaryIO | BytesIO, filename: str | None = None) -> pd.DataFrame:
     """Load CSV or Excel without guessing a currency."""
     name = (filename or getattr(file, "name", "")).lower()
-    if name.endswith((".xlsx", ".xls")):
-        frame = pd.read_excel(file)
+    if name.endswith(".xlsx"):
+        frame = pd.read_excel(file, engine="openpyxl")
+    elif name.endswith(".xls"):
+        frame = pd.read_excel(file, engine="xlrd")
     else:
         try:
             frame = pd.read_csv(file)
@@ -81,12 +84,14 @@ def analyze_sales(frame: pd.DataFrame) -> AnalysisResult:
     reasons: list[list[str]] = [[] for _ in range(len(work))]
 
     for column in ["order_id", "product", "category"]:
-        invalid = work[column].isna() | work[column].astype(str).str.strip().eq("")
-        for idx in work.index[invalid]:
-            reasons[work.index.get_loc(idx)].append(f"{column} is missing")
+        work[column] = work[column].astype("string").str.strip()
+        invalid = work[column].isna() | work[column].eq("")
+        for pos, bad in enumerate(invalid.tolist()):
+            if bad:
+                reasons[pos].append(f"{column} is missing")
 
     parsed_dates = pd.to_datetime(work["order_date"], errors="coerce", dayfirst=True)
-    for pos, bad in enumerate(parsed_dates.isna()):
+    for pos, bad in enumerate(parsed_dates.isna().tolist()):
         if bad:
             reasons[pos].append("order_date is missing or invalid")
     work["order_date"] = parsed_dates
@@ -96,6 +101,8 @@ def analyze_sales(frame: pd.DataFrame) -> AnalysisResult:
         for pos, value in enumerate(work[column].tolist()):
             if pd.isna(value):
                 reasons[pos].append(f"{column} is missing or not numeric")
+            elif not math.isfinite(float(value)):
+                reasons[pos].append(f"{column} must be a finite number")
             elif value < 0 or (column == "quantity" and value <= 0):
                 reasons[pos].append(f"{column} must be {'greater than zero' if column == 'quantity' else 'zero or greater'}")
 
@@ -147,7 +154,8 @@ def build_html_report(result: AnalysisResult) -> str:
     ]
     cards = "".join(f"<article><small>{label}</small><strong>{value}</strong></article>" for label, value in metrics)
     products = result.by_product.to_html(index=False, border=0, classes="data")
+    categories = result.by_category.to_html(index=False, border=0, classes="data")
     months = result.by_month.to_html(index=False, border=0, classes="data")
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DataPilot AI report</title><style>
     body{{font:15px system-ui,sans-serif;max-width:1050px;margin:40px auto;padding:0 20px;color:#202033;background:#faf9ff}}h1{{color:#4b2b83}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}}article{{background:white;border:1px solid #e8e2f2;border-radius:12px;padding:16px}}small{{display:block;color:#686477}}strong{{display:block;font-size:22px;margin-top:8px}}table{{border-collapse:collapse;width:100%;background:white;margin:12px 0 28px}}th,td{{padding:9px;border-bottom:1px solid #eee;text-align:left}}th{{background:#f0ebf8}}.note{{color:#666;font-size:13px}}
-    </style></head><body><h1>DataPilot AI — Sales report</h1><p>Based only on the valid rows in the uploaded dataset. No currency has been assumed.</p><section class="grid">{cards}</section><h2>Product performance</h2>{products}<h2>Monthly performance</h2>{months}<p class="note">Gross profit is revenue minus recorded unit cost. This is not certified accounting advice. Taxes, returns, shipping and payment fees are excluded unless present in the source data.</p></body></html>"""
+    </style></head><body><h1>DataPilot AI — Sales report</h1><p>Based only on the valid rows in the uploaded dataset. No currency has been assumed.</p><section class="grid">{cards}</section><h2>Product performance</h2>{products}<h2>Category performance</h2>{categories}<h2>Monthly performance</h2>{months}<p class="note">Gross profit is revenue minus recorded unit cost. This is not certified accounting advice. Taxes, returns, shipping and payment fees are excluded unless present in the source data.</p></body></html>"""
