@@ -25,7 +25,7 @@ Suggested first steps: compare revenue by region, inspect time movement, review 
 
 ## Validation
 
-The automated suite covers individual analysis engines and a full sample-customer journey: schema and domain detection, guided group/time analysis, evidence ranking, action-register traceability, HTML report generation and all nine Excel workbook sheets. Small-sample behavior and the synthetic-data disclosure are also regression-tested.
+The automated suite covers individual analysis engines and a full sample-customer journey plus real CSV, XLSX and JSON upload-to-report journeys: file intake, schema and domain detection, guided investigation, evidence ranking, action-register traceability, source-row scope, report metrics, HTML output and workbook tables. Small-sample behavior and the synthetic-data disclosure are also regression-tested.
 
 ```bash
 pytest -q
