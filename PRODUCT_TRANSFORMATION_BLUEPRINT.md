@@ -101,3 +101,10 @@ This is a foundation, not completion of the full transformation. Remaining high-
 The follow-up interaction layer adds Plotly point selection to group comparisons, category composition and numeric relationship charts. Selected categories/points are resolved back to the filtered source dataframe, displayed as records and offered as CSV exports. Selection parsing is isolated in tested helpers to handle missing, duplicate and malformed event fields safely.
 
 Remaining work: coordinated cross-filter state across multiple charts, time-window brush selection, advanced semantic roles and robust large-file workflows.
+
+
+## Implementation checkpoint — Semantic field understanding
+
+A separate semantic inference layer now labels likely percentages, currency-like amounts, durations, latitude/longitude, booleans, URLs, email/phone identifiers, postal codes and high-cardinality text. It includes confidence and rationale, and deliberately leaves currency, percentage scale and coordinate reference systems unassumed. The detected semantic metadata is displayed in the field dictionary and is covered by focused tests, including false-positive name checks.
+
+Remaining work: user-editable units and semantic types, locale-aware numeric parsing, nested JSON and multi-header diagnostics, and stronger domain-specific analysis templates.

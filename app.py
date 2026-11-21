@@ -15,6 +15,7 @@ import streamlit as st
 from universal_engine import profile_dataset, grouped_summary, time_summary
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
+from semantic_engine import infer_semantic_fields
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -299,6 +300,9 @@ if upload is not None:
                 raw, _ = read_upload(upload, chosen_sheet)
                 st.session_state["_loaded_sheet"] = chosen_sheet
         profile = make_profile(raw)
+        semantic_by_column = {item["column"]: item for item in infer_semantic_fields(raw)}
+        for field_meta in profile.columns:
+            field_meta.update(semantic_by_column.get(field_meta["column"], {}))
     except Exception as exc:
         st.error(f"DataPilot could not read this file: {exc}")
         st.info("Check the file format, headers, worksheet and encoding. If it is a nested JSON export, try exporting it as a flat table.")
