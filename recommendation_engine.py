@@ -62,8 +62,8 @@ def rank_findings(
             support = min(1.0, sample / 30.0)
             sample_label = f"{sample:,}"
         coverage = min(1.0, sample / max(1, row_count)) if sample is not None and row_count else 0.5
-        score = round(100 * (0.65 * base + 0.25 * support + 0.10 * coverage))
-        if score >= 78 and (sample is None or sample >= 20):
+        score = round(100 * (0.55 * base + 0.35 * support + 0.10 * coverage))
+        if score >= 78 and sample is not None and sample >= 20:
             evidence_level = "Stronger evidence"
         elif score >= 58 and (sample is None or sample >= 8):
             evidence_level = "Useful signal"
