@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from universal_engine import profile_dataset, grouped_summary, time_summary
+from visualizations import build_time_figure
 from engine import analyze_sales, load_sales_file, build_html_report
 
 st.set_page_config(page_title="DataPilot AI · Intelligent data studio", page_icon="◈", layout="wide", initial_sidebar_state="expanded")
@@ -163,10 +164,11 @@ if upload is not None:
             freq=st.segmented_control("Time grain",["Day","Week","Month","Quarter","Year"],default="Month")
             tagg=st.selectbox("Aggregation",["sum","mean","median","count"],key="time_agg")
             trend=time_summary(data,dcol,mcol,freq or "Month",tagg)
-            fig=px.line(trend,x="period",y="value",markers=True,area=True,color_discrete_sequence=["#7558f5"])
-            fig.update_traces(line=dict(width=3),fillcolor="rgba(117,88,245,.10)")
-            fig.update_layout(hovermode="x unified",height=410,margin=dict(t=20,b=20,l=10,r=10),paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig,use_container_width=True)
+            if trend.empty:
+                st.info("No valid date-and-measure pairs remain for this time selection.")
+            else:
+                fig=build_time_figure(trend)
+                st.plotly_chart(fig,use_container_width=True,config={"displaylogo":False,"responsive":True})
             st.dataframe(trend,use_container_width=True,hide_index=True)
             if len(trend)>=2:
                 first=float(trend.iloc[0]["value"]); last=float(trend.iloc[-1]["value"])
