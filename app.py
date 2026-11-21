@@ -15,6 +15,7 @@ import streamlit as st
 from universal_engine import profile_dataset, grouped_summary, time_summary
 from time_intelligence import analyze_time_series
 from domain_intelligence import assess_domain
+from recommendation_engine import rank_findings, build_next_questions
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
@@ -439,8 +440,12 @@ if upload is not None:
             st.session_state.pop(f"global_filter_{field}", None)
         st.rerun()
 
-    # Recalculate findings against the active global filter so explanations match the visible records.
-    profile.insights = build_evidence_findings(filtered, numeric_cols, category_cols, date_cols)
+    # Recalculate and prioritize findings against the active global filter.
+    raw_findings = build_evidence_findings(filtered, numeric_cols, category_cols, date_cols)
+    profile.insights = rank_findings(raw_findings, row_count=len(filtered), limit=20)
+    next_questions = build_next_questions(
+        domain_assessment["domain"], numeric_cols, category_cols, date_cols, limit=4
+    )
 
     # Common source context header
     st.markdown(f'<div class="pagehead"><div><div class="kicker">{profile.dataset_kind} · DATASET PROFILE</div><h2 style="margin:3px 0">{upload.name}</h2><div class="subtle">{len(data):,} rows · {len(data.columns):,} fields · recommended starting point: {recommendation}</div></div><span class="pill">LIVE SESSION</span></div>', unsafe_allow_html=True)
@@ -477,12 +482,24 @@ if upload is not None:
                 st.caption(template["why"])
                 if template["required_fields"]:
                     st.caption("Fields: " + ", ".join(template["required_fields"]))
-        st.markdown("## Intelligence brief")
-        st.caption("Evidence-led observations from the current dataset. These are patterns to investigate, not claims about causes.")
+        st.markdown("## Priority insights")
+        st.caption("Findings are ordered by a transparent review-priority heuristic using finding type, stated sample support and current view size. Scores are not probabilities or significance tests.")
         for item in profile.insights[:8]:
-            st.markdown(f'<div class="insight"><div class="kind">{item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p><div class="next">NEXT INVESTIGATION → {item["action"]}</div></div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="insight"><div class="kind">{item["evidence_level"]} · {item["priority_score"]}/100 · {item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p><div class="next">NEXT STEP → {item["next_step"]}</div><div class="subtle">{item["priority_reason"]}</div></div>',
+                unsafe_allow_html=True,
+            )
         if not profile.insights:
             st.markdown('<div class="empty">No reliable automatic findings yet. Open Analysis Studio to choose a measure and investigate the dataset.</div>', unsafe_allow_html=True)
+        st.markdown("## Questions worth exploring")
+        st.caption("These questions are generated only when the required field roles exist in the uploaded dataset.")
+        if next_questions:
+            for item in next_questions:
+                with st.container(border=True):
+                    st.markdown(f"**{item['question']}**")
+                    st.caption(item["why"] + " Fields: " + item["fields"])
+        else:
+            st.info("No focused questions can be suggested until usable measure, category or date fields are identified.")
         st.markdown("## Recommended first analysis")
         c1, c2 = st.columns([1.1, .9], gap="large")
         with c1:
@@ -728,7 +745,7 @@ if upload is not None:
         with x2:
             st.download_button("Download workbook (XLSX)", excel_export(data, profile, filtered), "datapilot_analysis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         with x3:
-            payload = {"dataset":upload.name,"kind":profile.dataset_kind,"rows":len(data),"filtered_rows":len(filtered),"quality":profile.quality,"field_profile":profile.columns,"findings":profile.insights,"filters":st.session_state.active_filters}
+            payload = {"dataset":upload.name,"kind":profile.dataset_kind,"rows":len(data),"filtered_rows":len(filtered),"quality":profile.quality,"field_profile":profile.columns,"findings":profile.insights,"next_questions":next_questions,"filters":st.session_state.active_filters}
             st.download_button("Download analysis profile (JSON)", json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8"), "datapilot_profile.json", "application/json", use_container_width=True)
         st.markdown("### Report preview")
         st.markdown(f'<div class="card"><div class="card-label">EXECUTIVE REPORT</div><div class="card-title">{report_title}</div><div class="card-copy">{profile.dataset_kind} · {len(filtered):,} filtered rows · {len(profile.insights):,} evidence-led findings · includes field profile, key measures, quality checks and method caveats.</div></div>', unsafe_allow_html=True)
