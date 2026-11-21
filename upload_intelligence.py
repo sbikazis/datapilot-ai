@@ -113,7 +113,7 @@ def read_dataset_upload(
 
     if frame.empty:
         metadata["warnings"].append("No data rows were found after reading the header.")
-    if frame.columns.astype(str).str.strip().eq("").any() or any(not str(value).strip() for value in metadata["raw_headers"]):
+    if any(not str(value).strip() for value in metadata["raw_headers"]):
         metadata["warnings"].append("One or more column headers are blank; generated placeholder names may be used.")
     normalized_headers = [str(value).strip().casefold() for value in metadata["raw_headers"]]
     duplicates = sorted({value for value in normalized_headers if value and normalized_headers.count(value) > 1})
