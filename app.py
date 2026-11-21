@@ -117,10 +117,36 @@ button[kind="primary"]{background:linear-gradient(110deg,#6250dc,#8a70ef)!import
 .loaded-dataset{display:flex;align-items:center;gap:12px;padding:12px 16px;margin:0 0 18px;background:#fff;border:1px solid #dcece8;border-radius:13px}
 .loaded-dataset strong{color:var(--ink);font-size:.9rem}
 .loaded-dot{width:9px;height:9px;border-radius:50%;background:#21a783;box-shadow:0 0 0 4px #e4f6f0;flex:none}
+.overview-intro{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:4px 0 18px}
+.overview-live{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #cdece3;border-radius:999px;background:#f0fbf7;color:#247b64;font-size:.67rem;font-weight:800;letter-spacing:.08em;white-space:nowrap}
+.overview-live span{width:7px;height:7px;border-radius:50%;background:#25a77e;box-shadow:0 0 0 4px #d9f4e9}
+.signal-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px 17px;margin:9px 0;box-shadow:0 5px 18px rgba(25,39,74,.035)}
+.signal-top{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.signal-index{font-size:.68rem;font-weight:800;color:#9aa3b5;letter-spacing:.08em}
+.signal-kind{font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#6c5ad5}
+.signal-title{font-family:Manrope,sans-serif;font-weight:800;font-size:.98rem;color:#202b45}
+.signal-card p{font-size:.82rem;color:#68758c;line-height:1.55;margin:5px 0}
+.signal-next{font-size:.69rem;color:#7565d9;font-weight:700;letter-spacing:.025em;margin-top:8px}
+.health-card,.domain-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px 16px;margin:8px 0 13px}
+.health-heading{display:flex;justify-content:space-between;align-items:center;color:#65718a;font-size:.8rem;font-weight:700}
+.health-heading strong{font-family:Manrope,sans-serif;font-size:1.25rem;color:#202b45}
+.health-track{height:8px;border-radius:99px;background:#edf0f6;overflow:hidden;margin:12px 0 8px}
+.health-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#6955e8,#21b8b2)}
+.health-foot{font-size:.72rem;color:#8993a7}
+.health-row{display:flex;justify-content:space-between;align-items:center;padding:9px 2px;border-bottom:1px solid #edf0f5}
+.health-row:last-child{border-bottom:0}
+.health-row div{display:flex;flex-direction:column;gap:2px}
+.health-row strong{font-size:.81rem;color:#34415c}
+.health-row span{font-size:.69rem;color:#8993a7}
+.health-row b{font-family:Manrope,sans-serif;font-size:.92rem;color:#202b45}
+.next-step{padding:11px 12px;border:1px solid #e8e6f6;border-radius:12px;background:#fbfaff;margin:8px 0}
+.next-step strong{font-size:.82rem;color:#303858}
+.next-step p{font-size:.76rem;color:#6e7890;margin:4px 0}
+.next-step span{font-size:.67rem;color:#8176c7}
 [data-testid="stFileUploader"]{border:1px dashed #aaa0e9;border-radius:14px;background:rgba(255,255,255,.78);padding:8px}
 [data-testid="stFileUploader"] section{background:transparent}
 [data-testid="stFileUploader"] button{border-radius:9px}
-@media(max-width:900px){.block-container{padding:1rem 1rem 3rem}.hero{padding:22px}.hero h1{font-size:1.6rem!important}.upload-panel{padding:16px}.upload-guidance{min-height:0}.pagehead{align-items:flex-start;flex-direction:column}}
+@media(max-width:900px){.block-container{padding:1rem 1rem 3rem}.hero{padding:22px}.hero h1{font-size:1.6rem!important}.upload-panel{padding:16px}.upload-guidance{min-height:0}.pagehead{align-items:flex-start;flex-direction:column}.overview-intro{align-items:flex-start;flex-direction:column}.overview-live{align-self:flex-start}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -487,68 +513,139 @@ if upload is not None:
 
     # ── Overview ───────────────────────────────────────────────────────────────
     if page == "Overview":
-        k = st.columns(5)
-        k[0].metric("Rows in view", f"{len(filtered):,}", f"{len(data)-len(filtered):,} filtered out")
-        k[1].metric("Fields", f"{len(data.columns):,}")
-        k[2].metric("Measures", f"{len(numeric_cols):,}")
-        k[3].metric("Date fields", f"{len(date_cols):,}")
-        k[4].metric("Missing cells", f"{int(data.isna().sum().sum()):,}", f"{profile.quality['missing_pct']}% of source cells")
-        st.markdown("## Adaptive domain understanding")
-        domain_left, domain_right = st.columns([1.15, .85], gap="large")
-        with domain_left:
-            st.markdown(f'<div class="card"><div class="card-label">DATASET LENS · {"USER SELECTED" if domain_assessment["is_overridden"] else "AUTOMATIC"}</div><div class="card-title">{domain_assessment["domain"]}</div><div class="card-copy">{domain_assessment["description"]}</div></div>', unsafe_allow_html=True)
-            if domain_assessment["is_overridden"]:
-                st.caption(f"Automatic schema assessment: {domain_assessment['automatic_domain']}. The selected lens is a user override.")
-            elif domain_assessment["confidence"]:
-                st.caption(f"Schema-evidence confidence: {domain_assessment['confidence']}% · not a statistical probability.")
-            else:
-                st.caption("No specialist domain had enough distinct schema evidence; the general analysis lens is used.")
-        with domain_right:
-            evidence_columns = domain_assessment["evidence_columns"]
-            st.markdown("**Evidence fields**")
-            st.write(", ".join(evidence_columns[:8]) if evidence_columns else "No specialist evidence fields detected.")
-        st.markdown("### Analysis playbook")
-        st.caption("Templates are enabled only when the required field roles exist in this dataset. They are analysis suggestions, not assumed business facts.")
-        for template in domain_assessment["templates"]:
-            with st.container(border=True):
-                status = "AVAILABLE" if template["available"] else "NEEDS MORE FIELDS"
-                st.markdown(f"**{template['title']}** · {status}")
-                st.write(template["question"])
-                st.caption(template["why"])
-                if template["required_fields"]:
-                    st.caption("Fields: " + ", ".join(template["required_fields"]))
-        st.markdown("## Intelligence brief")
-        st.caption("Evidence-led observations from the current dataset. These are patterns to investigate, not claims about causes.")
-        for item in profile.insights[:8]:
-            st.markdown(f'<div class="insight"><div class="kind">{item["kind"]}</div><strong>{item["title"]}</strong><p>{item["detail"]}</p><div class="next">NEXT INVESTIGATION → {item["action"]}</div></div>', unsafe_allow_html=True)
-        if not profile.insights:
-            st.markdown('<div class="empty">No reliable automatic findings yet. Open Analysis Studio to choose a measure and investigate the dataset.</div>', unsafe_allow_html=True)
-        st.markdown("## Recommended first analysis")
-        c1, c2 = st.columns([1.1, .9], gap="large")
-        with c1:
-            st.markdown(f'<div class="card"><div class="card-label">RECOMMENDED VIEW</div><div class="card-title">{recommendation}</div><div class="card-copy">{recommendation_reason}</div></div>', unsafe_allow_html=True)
-            if numeric_cols:
-                metric = st.selectbox("Preview a measure", numeric_cols, key="overview_metric")
-                series = pd.to_numeric(filtered[metric], errors="coerce").dropna()
-                if len(series):
-                    st.metric(f"{metric} · total", fmt(series.sum()), f"Average {fmt(series.mean())} · median {fmt(series.median())}")
-                    fig = px.histogram(filtered, x=metric, marginal="box", nbins=32, color_discrete_sequence=["#7563e8"])
-                    fig.update_layout(height=330, margin=dict(t=15,b=20,l=10,r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                    st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
-        with c2:
-            st.markdown("### Data health")
-            q = profile.quality
-            st.metric("Exact duplicate rows", f"{q['duplicate_rows']:,}")
-            st.metric("Constant fields", f"{len(q['constant_columns']):,}")
-            missing = data.isna().sum().sort_values(ascending=False)
-            missing = missing[missing > 0].head(8)
-            if len(missing):
-                st.markdown("**Fields with most missing values**")
-                st.dataframe(missing.rename("Missing").reset_index().rename(columns={"index":"Field"}), use_container_width=True, hide_index=True)
-            else:
-                st.success("No missing cells detected in the source data.")
-        st.caption("The automatic findings are statistical/rule-based. No external generative AI model is connected in this release.")
+        st.markdown("""
+        <div class="overview-intro">
+          <div>
+            <div class="kicker">YOUR INTELLIGENCE BRIEF</div>
+            <h2 style="margin:4px 0 5px">What is happening in this dataset?</h2>
+            <p class="subtle" style="margin:0">A live view of the data you uploaded, the signals detected, and where to investigate next.</p>
+          </div>
+          <div class="overview-live"><span></span> ANALYSIS READY</div>
+        </div>
+        """, unsafe_allow_html=True)
 
+        total_cells = max(1, int(data.size))
+        missing_cells = int(data.isna().sum().sum())
+        completeness = max(0.0, min(100.0, (1 - missing_cells / total_cells) * 100))
+        active_rows = len(filtered)
+        source_rows = len(data)
+        duplicate_rows = int(profile.quality["duplicate_rows"])
+        signal_count = len(profile.insights)
+
+        metrics = st.columns(4, gap="medium")
+        metrics[0].metric("Records in view", f"{active_rows:,}", f"{source_rows-active_rows:,} excluded by filters")
+        metrics[1].metric("Data completeness", f"{completeness:.1f}%", f"{missing_cells:,} missing cells")
+        metrics[2].metric("Evidence signals", f"{signal_count:,}", "Patterns to investigate")
+        metrics[3].metric("Exact duplicates", f"{duplicate_rows:,}", "Review before removing")
+
+        st.markdown('<div class="sectionline"></div>', unsafe_allow_html=True)
+        main_col, side_col = st.columns([1.35, .85], gap="large")
+
+        with main_col:
+            st.markdown("### Priority signals")
+            st.caption("Ranked observations from the current filtered rows. Each signal is evidence to inspect, not an explanation of cause.")
+            if profile.insights:
+                for index, item in enumerate(profile.insights[:4], start=1):
+                    kind = escape(str(item.get("kind", "observation")).upper())
+                    title = escape(str(item.get("title", "Untitled observation")))
+                    detail = escape(str(item.get("detail", "")))
+                    action = escape(str(item.get("action", "Open the analysis workspace")))
+                    st.markdown(
+                        f'<div class="signal-card"><div class="signal-top"><span class="signal-index">{index:02d}</span><span class="signal-kind">{kind}</span></div><div class="signal-title">{title}</div><p>{detail}</p><div class="signal-next">INVESTIGATE NEXT · {action}</div></div>',
+                        unsafe_allow_html=True,
+                    )
+                if st.button("Investigate these signals", type="primary", key="overview_investigate_signals"):
+                    st.session_state["nav_page"] = "Analysis Studio"
+                    st.session_state.pop("studio_mode", None)
+                    st.rerun()
+            else:
+                st.markdown('<div class="empty"><strong>No strong automatic signals yet.</strong><p>That is not a problem. Start with a field or data-quality review, then choose a question in Analysis Studio.</p></div>', unsafe_allow_html=True)
+                if st.button("Open Analysis Studio", type="primary", key="overview_empty_studio"):
+                    st.session_state["nav_page"] = "Analysis Studio"
+                    st.rerun()
+
+            st.markdown("### Explore the shape of your data")
+            chart_left, chart_right = st.columns(2, gap="medium")
+            with chart_left:
+                if category_cols:
+                    category_field = st.selectbox("Category snapshot", category_cols, key="overview_category_field")
+                    category_data = category_summary(filtered[category_field], top_n=7).rename(columns={"category": category_field})
+                    fig = px.bar(
+                        category_data.sort_values("records"),
+                        x="records", y=category_field, orientation="h",
+                        color="records",
+                        color_continuous_scale=["#c9c2fb", "#7664e8"],
+                    )
+                    fig.update_layout(height=300, margin=dict(t=15,b=15,l=8,r=8), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", coloraxis_showscale=False)
+                    st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, key="overview_category_chart")
+                    st.caption(f"Top categories by record count · {category_field}")
+                else:
+                    st.markdown('<div class="empty">No category fields are available for a composition snapshot.</div>', unsafe_allow_html=True)
+            with chart_right:
+                if numeric_cols:
+                    measure_field = st.selectbox("Measure snapshot", numeric_cols, key="overview_measure_field")
+                    measure_values = pd.to_numeric(filtered[measure_field], errors="coerce").replace([float("inf"), float("-inf")], pd.NA).dropna()
+                    if len(measure_values):
+                        fig = px.histogram(measure_values, x=measure_field, nbins=24, color_discrete_sequence=["#21b8b2"])
+                        fig.update_layout(height=300, margin=dict(t=15,b=15,l=8,r=8), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                        st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False}, key="overview_measure_chart")
+                        st.caption(f"Observed distribution · {len(measure_values):,} valid values")
+                    else:
+                        st.info("No valid numeric values remain under the active filters.")
+                else:
+                    st.markdown('<div class="empty">No numeric measures are available for a distribution snapshot.</div>', unsafe_allow_html=True)
+
+        with side_col:
+            st.markdown("### Data health")
+            st.markdown(f'<div class="health-card"><div class="health-heading"><span>Completeness</span><strong>{completeness:.1f}%</strong></div><div class="health-track"><span style="width:{completeness:.1f}%"></span></div><div class="health-foot">{missing_cells:,} missing of {total_cells:,} cells in the source table</div></div>', unsafe_allow_html=True)
+            health_items = [
+                ("Rows", f"{source_rows:,}", "Source records"),
+                ("Fields", f"{len(data.columns):,}", "Detected columns"),
+                ("Measures", f"{len(numeric_cols):,}", "Numeric fields"),
+                ("Date fields", f"{len(date_cols):,}", "Recognized time fields"),
+                ("Constant fields", f"{len(profile.quality['constant_columns']):,}", "Fields with one distinct value"),
+            ]
+            for label, value, note in health_items:
+                st.markdown(f'<div class="health-row"><div><strong>{label}</strong><span>{note}</span></div><b>{value}</b></div>', unsafe_allow_html=True)
+
+            st.markdown("### Dataset understanding")
+            st.markdown(f'<div class="domain-card"><div class="card-label">DETECTED DATA LENS</div><div class="card-title">{escape(str(domain_assessment["domain"]))}</div><div class="card-copy">{escape(str(domain_assessment["description"]))}</div></div>', unsafe_allow_html=True)
+            if domain_assessment["is_overridden"]:
+                st.caption(f"Manually selected lens · automatic assessment: {domain_assessment['automatic_domain']}.")
+            elif domain_assessment["confidence"]:
+                st.caption(f"Schema evidence score: {domain_assessment['confidence']}% (not a statistical probability).")
+            else:
+                st.caption("No specialist domain had enough independent field-name evidence.")
+
+            st.markdown("### Suggested next move")
+            available_templates = [item for item in domain_assessment["templates"] if item["available"]]
+            if available_templates:
+                for template in available_templates[:3]:
+                    st.markdown(f'<div class="next-step"><strong>{escape(str(template["title"]))}</strong><p>{escape(str(template["question"]))}</p><span>Fields: {escape(", ".join(template["required_fields"]) or "Review schema")}</span></div>', unsafe_allow_html=True)
+                if st.button("Build an analysis", type="primary", use_container_width=True, key="overview_build_analysis"):
+                    st.session_state["nav_page"] = "Analysis Studio"
+                    st.session_state.pop("studio_mode", None)
+                    st.rerun()
+            else:
+                st.info("Review detected field roles to unlock a suitable starting analysis.")
+
+        st.markdown('<div class="sectionline"></div>', unsafe_allow_html=True)
+        footer_left, footer_right = st.columns([1, 1], gap="large")
+        with footer_left:
+            st.markdown("**Need the exact source records?**")
+            st.caption("Open Data Explorer to search rows, review field roles and trace values back to the uploaded file.")
+            if st.button("Open Data Explorer", key="overview_open_explorer"):
+                st.session_state["nav_page"] = "Data Explorer"
+                st.rerun()
+        with footer_right:
+            st.markdown("**Ready to share what you found?**")
+            st.caption("Create a portable report from the current data and filter state. HTML, Excel and JSON exports are available.")
+            if st.button("Create a report", key="overview_open_reports"):
+                st.session_state["nav_page"] = "Reports"
+                st.rerun()
+
+        st.caption("All observations are computed from the uploaded dataset and active filters. Statistical patterns do not establish causes, forecasts or business outcomes.")
+ 
     # ── Analysis Studio ────────────────────────────────────────────────────────
     elif page == "Analysis Studio":
         st.markdown("## Analysis Studio")
