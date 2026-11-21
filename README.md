@@ -11,7 +11,7 @@
 - Automatic field profiling for measures, categories, identifiers and dates, with a reviewable field-role override.
 - Conservative semantic hints for percentages, currency-like amounts (without guessing the currency), durations, coordinates, booleans, URLs and personal-data identifiers such as email/phone.
 - Global category filters applied across overview findings, analysis views, exploration and reports.
-- Adaptive analysis recommendations, descriptive statistics, IQR outlier review, category concentration, date coverage and evidence-backed relationship findings.
+- Adaptive analysis recommendations, descriptive statistics, IQR outlier review, category concentration, date coverage, evidence-backed relationships and sample-aware segment differences with minimum-group-size safeguards.
 - Interactive group comparisons, time trends, distributions, scatter plots, category composition and source-row exploration.
 - Select marks in comparison, composition and scatter charts to drill into the exact matching source records, preview up to 500 rows and export the selection.
 - HTML executive report, multi-sheet XLSX workbook, CSV extracts and JSON analysis profile.
