@@ -18,6 +18,7 @@ from domain_intelligence import assess_domain
 from recommendation_engine import rank_findings, build_next_questions
 from report_intelligence import build_report_data, render_html_report, report_workbook_sheets
 from guided_analysis import available_guided_paths, build_guided_result
+from insight_actions import build_action_plan, action_plan_summary, action_plan_frame
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
@@ -291,7 +292,7 @@ with st.sidebar:
     st.markdown("---")
     page = st.radio(
         "WORKSPACE",
-        ["Overview", "Guided Analysis", "Analysis Studio", "Data Explorer", "Reports", "Settings"],
+        ["Overview", "Guided Analysis", "Decisions", "Analysis Studio", "Data Explorer", "Reports", "Settings"],
         key="nav_page",
         label_visibility="collapsed",
     )
@@ -729,6 +730,61 @@ if upload is not None:
             st.caption("Guided results are descriptive and traceable to the current filtered rows. They do not establish causality or predict future outcomes.")
         else:
             st.info("Choose an objective and its fields, then run the analysis. Only supported objectives are shown for this dataset.")
+
+    # ── Decisions ──────────────────────────────────────────────────────────────
+    elif page == "Decisions":
+        st.markdown("## Insight-to-Action")
+        st.caption("Turn ranked findings into concrete validation steps. Each action keeps its source evidence, sample context and decision guardrail.")
+        action_plan = build_action_plan(profile.insights, filtered.columns.tolist(), len(filtered), limit=20)
+        summary = action_plan_summary(action_plan)
+        if not action_plan:
+            st.markdown('<div class="empty"><strong>No evidence-backed actions are available yet.</strong><p>Review data quality or choose a guided analysis to generate a finding supported by the current dataset.</p></div>', unsafe_allow_html=True)
+            st.button("Open Guided Analysis", type="primary", key="decisions_open_guided", on_click=go_to_page, args=("Guided Analysis",))
+        else:
+            st.markdown("### Action overview")
+            cards = st.columns(4)
+            cards[0].metric("Actions to review", summary["actions"])
+            cards[1].metric("Risks to validate", summary.get("Risk to validate", 0) + summary.get("Data risk to validate", 0))
+            cards[2].metric("Opportunities to investigate", summary.get("Opportunity to investigate", 0))
+            cards[3].metric("Changes / coverage", summary.get("Change to investigate", 0) + summary.get("Coverage limitation", 0))
+            st.info("These are investigation priorities, not promises of revenue, savings, performance improvement or causal impact. Validate each item before making a business decision.")
+            action_options = {f'{item["action_id"]} · {item["action_type"]} — {item["finding_title"]}': item for item in action_plan}
+            selected_action_label = st.selectbox("Choose an action to inspect", list(action_options), key="selected_decision_action")
+            selected_action = action_options[selected_action_label]
+            st.markdown('<div class="sectionline"></div>', unsafe_allow_html=True)
+            st.markdown(f'### {selected_action["action_type"]}')
+            st.markdown(f'**{selected_action["finding_title"]}**')
+            st.write(selected_action["recommended_check"])
+            evidence_left, evidence_right = st.columns(2)
+            with evidence_left:
+                st.markdown("**Source evidence**")
+                st.write(selected_action["evidence"] or "No detailed evidence text was supplied by the finding.")
+                st.caption(f'Finding type: {selected_action["finding_kind"]} · Evidence: {selected_action["evidence_level"]}')
+            with evidence_right:
+                st.markdown("**Evidence context**")
+                st.metric("Priority score", f'{selected_action["priority_score"]}/100' if selected_action["priority_score"] is not None else "Not scored")
+                st.metric("Sample support", str(selected_action["sample"]))
+                st.metric("Rows in current view", f'{selected_action["view_rows"]:,}')
+                st.caption("Priority scores are a review-order heuristic, not statistical significance or probability.")
+            st.markdown("**Fields referenced by this finding**")
+            if selected_action["fields"]:
+                st.write(" · ".join(selected_action["fields"]))
+            else:
+                st.caption("No source column could be matched safely from the finding text.")
+            st.markdown("**Suggested validation step**")
+            st.write(selected_action["next_step"])
+            st.markdown("**Decision guardrail**")
+            st.caption(selected_action["decision_guardrail"])
+            source_index = selected_action["source_index"]
+            original_finding = profile.insights[source_index] if source_index < len(profile.insights) else {}
+            with st.expander("Inspect original finding and full priority rationale"):
+                st.json(original_finding)
+            export_frame = action_plan_frame(action_plan)
+            st.download_button("Export action plan (CSV)", export_frame.to_csv(index=False).encode("utf-8-sig"), "datapilot_action_plan.csv", "text/csv", key="export_action_plan")
+            st.download_button("Export action plan (JSON)", json.dumps(action_plan, ensure_ascii=False, indent=2, default=str).encode("utf-8"), "datapilot_action_plan.json", "application/json", key="export_action_plan_json")
+            st.markdown("### Full action register")
+            st.dataframe(export_frame, use_container_width=True, hide_index=True)
+            st.caption("The register is rebuilt from the current filtered dataset on each run. Actions are session-local and are not saved to an account or external service.")
 
     # ── Analysis Studio ────────────────────────────────────────────────────────
     elif page == "Analysis Studio":
