@@ -55,6 +55,7 @@ def test_html_report_contains_metrics_and_all_breakdowns():
 
 def test_infinite_numeric_values_are_rejected():
     frame = sample()
+    frame["Selling Price"] = frame["Selling Price"].astype(float)
     frame.loc[0, "Selling Price"] = float("inf")
     result = analyze_sales(frame)
     assert result.summary["valid_rows"] == 2
