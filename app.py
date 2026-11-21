@@ -12,6 +12,7 @@ import streamlit as st
 
 from universal_engine import profile_dataset, grouped_summary, time_summary
 from visualizations import build_time_figure
+from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -326,7 +327,7 @@ profile.numeric_columns = numeric_cols
 profile.categorical_columns = category_cols
 profile.date_columns = date_cols
 profile.data = data
-recommendation, recommendation_reason = recommend_chart(data, numeric_cols, category_cols, date_cols)
+recommendation, recommendation_reason = recommend_visualization(numeric_cols, category_cols, date_cols)
 
 # Global filters apply across every workspace page.
 st.sidebar.markdown("---")
@@ -470,8 +471,9 @@ elif page == "Analysis Studio":
             st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False})
             s = pd.to_numeric(filtered[measure], errors="coerce").dropna()
             if len(s):
+                stats = numeric_summary(s)
                 m = st.columns(5)
-                for col, label, value in zip(m, ["Count","Mean","Median","Std dev","90th percentile"], [len(s),s.mean(),s.median(),s.std(),s.quantile(.9)]):
+                for col, label, value in zip(m, ["Count","Mean","Median","IQR outliers","90th percentile"], [stats["count"],stats["mean"],stats["median"],stats["iqr_outliers"],stats["p90"]]):
                     col.metric(label, fmt(value))
                 st.caption("Statistics are calculated after global filters. Standard deviation is sample-based.")
         else:
@@ -488,13 +490,13 @@ elif page == "Analysis Studio":
             plot_data[y] = pd.to_numeric(plot_data[y], errors="coerce")
             plot_data = plot_data.dropna(subset=[x,y])
             if color != "None":
-                fig = px.scatter(plot_data, x=x, y=y, color=color, opacity=.75, trendline="ols" if len(plot_data)>=3 else None)
+                fig = px.scatter(plot_data, x=x, y=y, color=color, opacity=.75)
             else:
-                fig = px.scatter(plot_data, x=x, y=y, opacity=.75, trendline="ols" if len(plot_data)>=3 else None, color_discrete_sequence=["#6955e8"])
+                fig = px.scatter(plot_data, x=x, y=y, opacity=.75, color_discrete_sequence=["#6955e8"])
             fig.update_traces(marker={"size":9,"line":{"width":1,"color":"white"}})
             fig.update_layout(height=450, hovermode="closest", margin=dict(t=25,b=20,l=15,r=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig, use_container_width=True, config={"displaylogo":False,"scrollZoom":True})
-            corr, n = safe_corr(plot_data[x], plot_data[y])
+            corr, n = safe_correlation(plot_data, x, y)
             if corr is not None:
                 st.metric("Pearson correlation", f"{corr:.3f}", f"{n:,} paired observations")
                 st.caption("Correlation describes linear association, not causation. Inspect the scatter plot for clusters and influential observations.")
@@ -503,7 +505,7 @@ elif page == "Analysis Studio":
     elif mode == "Category composition":
         if category_cols:
             dim = st.selectbox("Category field", category_cols)
-            counts = filtered[dim].fillna("(Missing)").astype(str).value_counts().head(20).rename_axis(dim).reset_index(name="records")
+            counts = category_summary(filtered[dim], top_n=20).rename(columns={"category": dim})
             chart = st.selectbox("Composition view", ["Donut","Treemap","Bar"])
             if chart == "Donut":
                 fig = px.pie(counts, names=dim, values="records", hole=.58)
