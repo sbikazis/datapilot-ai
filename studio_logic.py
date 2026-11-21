@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import math
 from typing import Iterable
 
@@ -174,7 +175,7 @@ def detect_delimiter(sample: str) -> str:
     if not sample.strip():
         return ","
     try:
-        dialect = __import__("csv").Sniffer().sniff(sample[:8192], delimiters=",;\\t|")
+        dialect = csv.Sniffer().sniff(sample[:8192], delimiters=",;\\t|")
         return dialect.delimiter
-    except (csv.Error, NameError):
+    except csv.Error:
         return ","
