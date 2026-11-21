@@ -142,3 +142,12 @@ def test_full_twenty_row_demo_file_is_fully_accepted_with_expected_totals():
     assert result.summary["gross_margin_pct"] == pytest.approx(54.8324742268)
     assert result.summary["order_count"] == 20
     assert result.summary["average_order_value"] == pytest.approx(31.04)
+
+
+def test_malformed_numeric_value_is_rejected_with_row_reason():
+    frame = sample().iloc[:2].copy()
+    frame.loc[0, "Selling Price"] = "12-3"
+    result = analyze_sales(frame)
+    assert result.summary["valid_rows"] == 1
+    assert result.summary["rejected_rows"] == 1
+    assert "unit_price is missing or not numeric" in result.rejected.iloc[0]["rejection_reason"]
