@@ -154,3 +154,8 @@ This remains deterministic statistical analysis, not generative AI. Guided analy
 The Decisions workspace converts ranked deterministic findings into a structured action register. Each item retains its source observation, priority/evidence label, sample context, matched source columns, suggested validation step and a decision guardrail. Finding types map to cautious investigation language (for example, a segment difference becomes an opportunity to investigate, not a guaranteed business gain). Unknown finding types receive a generic validation step. Users can inspect the original finding and export the register as CSV or JSON. The register is recalculated from the active filtered view and remains session-local.
 
 This layer does not estimate financial impact, prescribe interventions, prove causality or claim generative-AI reasoning. Its purpose is to make the next validation step clearer and auditable.
+
+
+## Implementation checkpoint — Customer-ready first session
+
+The welcome screen now offers a reproducible synthetic order dataset that enters the same analysis pipeline as uploaded files. The sample is generated locally with a fixed seed, bounded row count and fictional identifiers; its synthetic status is disclosed in the interface. This removes the blank-first-run barrier without presenting demo findings as customer evidence. The sample remains session-local and is replaced when a user uploads their own dataset.
