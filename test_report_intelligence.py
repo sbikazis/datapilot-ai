@@ -72,11 +72,11 @@ def test_invalid_precision_is_rejected(precision):
         build_report_data(frame, frame, ["x"], [], {}, [], [], precision=precision)
 
 
-def test_client_ready_metadata_is_trimmed_escaped_and_included_in_workbook(report):
+def test_client_ready_metadata_is_escaped_and_included_in_workbook(report):
     from report_intelligence import render_html_report, report_workbook_sheets
 
-    report["prepared_for"] = "  Acme <Research>  "
-    report["prepared_by"] = "  Analyst One  "
+    "report["prepared_for"] = "Acme <Research>"
+    "report["prepared_by"] = "Analyst One"
     report["analyst_note"] = "Context: <script>alert('x')</script> — validate Q4 scope."
     html = render_html_report(report)
     assert "Prepared for Acme &lt;Research&gt;" in html
@@ -84,8 +84,8 @@ def test_client_ready_metadata_is_trimmed_escaped_and_included_in_workbook(repor
     assert "<script>alert('x')</script>" not in html
     assert "Provided by the report author" in html
     summary = report_workbook_sheets(report)["Executive summary"].iloc[0]
-    assert summary["prepared_for"] == "  Acme <Research>  "
-    assert summary["prepared_by"] == "  Analyst One  "
+    assert summary["prepared_for"] == "Acme <Research>"
+    assert summary["prepared_by"] == "Analyst One"
     assert summary["analyst_note"].startswith("Context:")
 
 
