@@ -68,7 +68,7 @@ def infer_semantic_fields(frame: pd.DataFrame) -> list[dict[str, Any]]:
         elif pd.api.types.is_numeric_dtype(series):
             semantic, confidence = "Numeric measure", "medium"
             reason = "The stored values are numeric; their business meaning is not assumed."
-        elif len(values) and values.nunique() / max(1, len(values)) > 0.9:
+        elif len(values) >= 20 and values.nunique() >= 10 and values.nunique() / max(1, len(values)) > 0.9:
             semantic, confidence = "High-cardinality text", "medium"
             reason = "Most non-empty values are unique; this may be an identifier or free text."
 
