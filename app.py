@@ -963,7 +963,7 @@ if upload is not None:
             numeric_values = pd.to_numeric(spotlight, errors="coerce").dropna()
             if not numeric_values.empty:
                 spotlight_fig = px.histogram(
-                    numeric_values, x=numeric_values, nbins=36,
+                    x=numeric_values, nbins=36,
                     color_discrete_sequence=["#7664e8"],
                     labels={"x": spotlight_field, "count": "Records"},
                 )
