@@ -108,3 +108,10 @@ Remaining work: coordinated cross-filter state across multiple charts, time-wind
 A separate semantic inference layer now labels likely percentages, currency-like amounts, durations, latitude/longitude, booleans, URLs, email/phone identifiers, postal codes and high-cardinality text. It includes confidence and rationale, and deliberately leaves currency, percentage scale and coordinate reference systems unassumed. The detected semantic metadata is displayed in the field dictionary and is covered by focused tests, including false-positive name checks.
 
 Remaining work: user-editable units and semantic types, locale-aware numeric parsing, nested JSON and multi-header diagnostics, and stronger domain-specific analysis templates.
+
+
+## Implementation checkpoint — Functional workspace controls
+
+Workspace settings now include an optional uploaded logo (session-only), workspace name/subtitle, mark/initials, four accent palettes, light/dark theme, density, default analysis view, Top N, numeric precision and a report methodology toggle. These controls are wired to the interface and report generation rather than being decorative settings. Reset runs through a safe session-state callback.
+
+Persistent settings, cloud identity and cross-device logo storage remain intentionally unimplemented until a secure account/storage layer exists.

@@ -30,7 +30,12 @@ defaults = {
     "theme_mode": "Light",
     "density": "Comfortable",
     "workspace_mark": "◈",
+    "workspace_subtitle": "ADAPTIVE DATA INTELLIGENCE",
+    "workspace_logo_upload": None,
     "accent_palette": "Violet",
+    "precision": 2,
+    "default_top_n": 12,
+    "show_method_notes": True,
     "nav_page": "Overview",
     "active_filters": {},
     "role_overrides": {},
@@ -38,7 +43,17 @@ defaults = {
 }
 for key, value in defaults.items():
     if key not in st.session_state:
-        st.session_state[key] = value
+        st.session_state[key] = value.copy() if isinstance(value, dict) else value
+
+
+def reset_workspace_preferences():
+    for key, value in defaults.items():
+        st.session_state[key] = value.copy() if isinstance(value, dict) else value
+
+
+def apply_analysis_defaults():
+    st.session_state.pop("studio_mode", None)
+    st.session_state.pop("cmp_limit", None)
 
 # ── Design system ──────────────────────────────────────────────────────────
 st.markdown("""
@@ -154,7 +169,8 @@ def read_upload(upload, sheet_name=None):
     delimiter = detect_delimiter(sample)
     return pd.read_csv(BytesIO(payload), sep=delimiter, encoding=encoding), []
 
-def fmt(value, decimals=2):
+def fmt(value, decimals=None):
+    decimals = st.session_state.get("precision", 2) if decimals is None else decimals
     if value is None or pd.isna(value):
         return "—"
     try:
@@ -182,16 +198,17 @@ def recommend_chart(frame, numeric, categorical, dates):
         return "Distribution", "A numeric measure supports a distribution view."
     return "Category frequency", "Categorical fields support frequency and composition analysis."
 
-def to_html_report(title, filename, profile, frame, filtered, findings, workspace):
+def to_html_report(title, filename, profile, frame, filtered, findings, workspace, include_method_notes=True, precision=2):
     metrics = []
     for col in profile.numeric_columns[:8]:
         s = pd.to_numeric(filtered[col], errors="coerce").dropna()
         if len(s):
-            metrics.append(f"<tr><td>{escape(col)}</td><td>{len(s):,}</td><td>{s.sum():,.3f}</td><td>{s.mean():,.3f}</td><td>{s.median():,.3f}</td></tr>")
+            metrics.append(f"<tr><td>{escape(col)}</td><td>{len(s):,}</td><td>{s.sum():,.{precision}f}</td><td>{s.mean():,.{precision}f}</td><td>{s.median():,.{precision}f}</td></tr>")
     insight_html = "".join(
         f"<article><small>{escape(x['kind'])}</small><h3>{escape(x['title'])}</h3><p>{escape(x['detail'])}</p><p class='muted'>Next: {escape(x['action'])}</p></article>"
         for x in findings
     )
+    method_html = "<h2>Method and limitations</h2><p>Findings describe observed patterns and statistical associations. They do not establish causes, forecasts or missing business facts. Review detected field roles and data quality before making decisions.</p>" if include_method_notes else ""
     return f"""<!doctype html><html><head><meta charset='utf-8'><title>{escape(title)}</title>
 <style>
 body{{font:15px/1.6 Arial,sans-serif;background:#f4f6fb;color:#1d2942;margin:0;padding:36px}}
@@ -204,7 +221,7 @@ table{{border-collapse:collapse;width:100%;margin-top:12px}}td,th{{border-bottom
 <h2>Executive snapshot</h2><p>{profile.dataset_kind} · {len(frame):,} rows · {len(frame.columns):,} fields · {profile.quality['missing_cells']:,} missing cells · {profile.quality['duplicate_rows']:,} exact duplicate rows</p>
 <h2>Key measures</h2><table><tr><th>Measure</th><th>Valid</th><th>Total</th><th>Average</th><th>Median</th></tr>{''.join(metrics)}</table>
 <h2>Evidence-led findings</h2>{insight_html}
-<h2>Method and limitations</h2><p>Findings are calculated from the selected data. They describe observed patterns and statistical associations; they do not establish causes, forecasts, or missing business facts. Review detected field roles and data quality before making decisions.</p>
+{method_html}
 <p class='muted'>DataPilot AI · Adaptive Data Intelligence</p></main></body></html>"""
 
 def excel_export(frame, profile, filtered):
@@ -218,7 +235,15 @@ def excel_export(frame, profile, filtered):
 
 # ── Sidebar shell ───────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(f'<div class="brand"><div class="brandmark">{escape(st.session_state.workspace_mark[:3])}</div><div><div class="brandname">DataPilot AI</div><div class="brandtag">INTELLIGENCE STUDIO</div></div></div>', unsafe_allow_html=True)
+    brand_icon, brand_text = st.columns([1, 3])
+    with brand_icon:
+        logo_upload = st.session_state.get("workspace_logo_upload")
+        if logo_upload is not None:
+            st.image(logo_upload.getvalue(), width=42)
+        else:
+            st.markdown(f'<div class="brandmark">{escape(st.session_state.workspace_mark[:3])}</div>', unsafe_allow_html=True)
+    with brand_text:
+        st.markdown('<div class="brandname">DataPilot AI</div><div class="brandtag">INTELLIGENCE STUDIO</div>', unsafe_allow_html=True)
     st.caption(escape(st.session_state.get("workspace_subtitle", "YOUR DATA. UNDERSTOOD.")))
     st.markdown("---")
     page = st.radio(
@@ -445,7 +470,9 @@ if upload is not None:
         if not numeric_cols and not category_cols and not date_cols:
             st.warning("No analyzable fields were detected. Review field roles in the sidebar.")
         mode_options = ["Compare groups", "Time trend", "Distribution", "Relationship", "Category composition"]
-        default_mode = {"Ranked comparison":"Compare groups","Time trend":"Time trend","Distribution":"Distribution","Relationship scatter":"Relationship","Category frequency":"Category composition"}.get(recommendation, "Compare groups")
+        recommended_mode = {"Ranked comparison":"Compare groups","Time trend":"Time trend","Distribution":"Distribution","Relationship scatter":"Relationship","Category frequency":"Category composition"}.get(recommendation, "Compare groups")
+        configured_mode = st.session_state.get("chart_type", "Recommended")
+        default_mode = configured_mode if configured_mode in mode_options else recommended_mode
         mode = st.segmented_control("Analysis type", mode_options, default=default_mode, key="studio_mode")
         mode = mode or default_mode
         if mode == "Compare groups":
@@ -454,7 +481,7 @@ if upload is not None:
                 with a: dimension = st.selectbox("Dimension", category_cols, key="cmp_dimension")
                 with b: measure = st.selectbox("Measure", numeric_cols, key="cmp_measure")
                 with c: agg = st.selectbox("Aggregation", ["sum","mean","median","min","max","count"], key="cmp_agg")
-                limit = st.slider("Show groups", 3, 40, 12, key="cmp_limit")
+                limit = st.slider("Show groups", 3, 50, int(st.session_state.get("default_top_n", 12)), key="cmp_limit")
                 summary = grouped_summary(filtered, dimension, measure, agg).head(limit)
                 if summary.empty:
                     st.info("No rows remain for this comparison. Adjust the global filters.")
@@ -631,7 +658,7 @@ if upload is not None:
         st.caption("Build a portable report from the current data and filter state. Report figures are computed, not generated from invented context.")
         report_title = st.text_input("Report title", value=f"{profile.dataset_kind} analysis")
         report_findings = profile.insights[:12]
-        html = to_html_report(report_title, upload.name, profile, data, filtered, report_findings, st.session_state.workspace_name)
+        html = to_html_report(report_title, upload.name, profile, data, filtered, report_findings, st.session_state.workspace_name, include_method_notes=st.session_state.get("show_method_notes", True), precision=st.session_state.get("precision", 2))
         x1,x2,x3 = st.columns(3)
         with x1:
             st.download_button("Download executive report (HTML)", html.encode("utf-8"), "datapilot_executive_report.html", "text/html", use_container_width=True, type="primary")
@@ -657,22 +684,24 @@ if upload is not None:
             st.text_input("Workspace subtitle", value="ADAPTIVE DATA INTELLIGENCE", key="workspace_subtitle")
             st.markdown("### Appearance")
             st.text_input("Brand mark / initials", key="workspace_mark", max_chars=3)
+            if st.session_state.get("workspace_logo_upload") is not None:
+                if st.button("Remove workspace logo"):
+                    st.session_state.pop("workspace_logo_upload", None)
+                    st.rerun()
+            st.file_uploader("Workspace logo (PNG/JPG/WebP)", type=["png","jpg","jpeg","webp"], key="workspace_logo_upload")
             st.selectbox("Accent palette", ["Violet","Ocean","Emerald","Amber"], key="accent_palette")
             st.selectbox("Theme", ["Light","Dark"], key="theme_mode")
             st.selectbox("Density", ["Comfortable","Compact"], key="density")
         with right:
             st.markdown("### Analysis defaults")
-            st.selectbox("Default chart preference", ["Recommended","Bars","Line","Scatter","Table"], key="chart_type")
+            st.selectbox("Default analysis view", ["Recommended","Compare groups","Time trend","Distribution","Relationship","Category composition"], key="chart_type", on_change=apply_analysis_defaults)
             st.selectbox("Number precision", [0,1,2,3,4], index=2, key="precision")
-            st.selectbox("Default Top N", [5,10,12,20,30,50], index=2, key="default_top_n")
+            st.selectbox("Default Top N", [5,10,12,20,30,50], index=2, key="default_top_n", on_change=apply_analysis_defaults)
             st.markdown("### Privacy & data handling")
             st.info("Uploads are analyzed in the active app session. This build does not provide account login, persistent cloud projects, shared workspaces or external AI processing.")
             st.checkbox("Show methodology notes in reports", value=True, key="show_method_notes")
         st.markdown("---")
-        if st.button("Reset workspace preferences"):
-            for key, value in defaults.items():
-                st.session_state[key] = value
-            st.rerun()
+        st.button("Reset workspace preferences", on_click=reset_workspace_preferences)
         st.caption("Persistent identity, custom logo uploads and cross-device settings require an authenticated storage layer; this page does not pretend those backend capabilities exist.")
 
     st.markdown('<div class="sectionline"></div><div class="subtle">DataPilot AI · Adaptive analysis, transparent calculations and evidence-led exploration. No fabricated causes, forecasts or business assumptions.</div>', unsafe_allow_html=True)
