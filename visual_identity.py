@@ -96,7 +96,8 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
 [data-testid="stMetricLabel"]{color:var(--muted)!important;font-weight:650}
 [data-testid="stMetricValue"]{color:var(--text)!important;font-weight:780}
 .card,.insight,.signal-card,.health-card,.domain-card,.pagehead,.upload-panel,.upload-guidance,.workspace-topbar{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:__CARDPAD__;box-shadow:0 8px 28px color-mix(in srgb,var(--text) 4%,transparent)}
-.card:hover,.signal-card:hover,.domain-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px color-mix(in srgb,var(--text) 8%,transparent)}\n.card-title,.insight strong,.signal-title,.health-heading strong,.health-row strong,.health-row b,.workspace-filename{color:var(--text)!important}
+.card:hover,.signal-card:hover,.domain-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px color-mix(in srgb,var(--text) 8%,transparent)}
+.card-title,.insight strong,.signal-title,.health-heading strong,.health-row strong,.health-row b,.workspace-filename{color:var(--text)!important}
 .card-copy,.insight p,.signal-card p,.signal-next,.health-row span,.health-foot,.workspace-detail{color:var(--muted)!important}
 .kicker,.card-label,.replace-label,.brandtag{color:var(--muted)!important;letter-spacing:.13em;font-weight:750}
 .brandmark{background:linear-gradient(135deg,var(--accent),var(--accent-2))!important;box-shadow:0 6px 22px var(--glow);border-radius:12px}
@@ -113,7 +114,8 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
 .dataset-summary .dataset-kind{background:var(--accent-soft)!important;color:var(--accent)!important;border-color:color-mix(in srgb,var(--accent) 25%,var(--line))!important}
 .next-step{background:var(--accent-soft)!important;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line))!important;border-radius:12px}
 .next-step strong{color:var(--accent)!important}
-.overview-live{background:var(--accent-soft)!important;color:var(--accent)!important;border-color:var(--line)!important}\n.health-track{background:var(--surface-2)!important}.health-track>span{background:linear-gradient(90deg,var(--accent),var(--accent-2))!important}
+.overview-live{background:var(--accent-soft)!important;color:var(--accent)!important;border-color:var(--line)!important}
+.health-track{background:var(--surface-2)!important}.health-track>span{background:linear-gradient(90deg,var(--accent),var(--accent-2))!important}
 .sectionline{background:var(--line)!important}
 .stButton>button,.stDownloadButton>button{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:11px!important;font-weight:680;min-height:2.55rem;transition:transform .18s,box-shadow .18s,border-color .18s}
 .stButton>button:hover,.stDownloadButton>button:hover{border-color:var(--accent)!important;box-shadow:0 8px 22px var(--glow);transform:translateY(-1px)}
