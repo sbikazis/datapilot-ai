@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from html import escape
 from io import BytesIO
+import csv
 import json
 import re
 
@@ -13,7 +14,7 @@ import streamlit as st
 
 from universal_engine import profile_dataset, grouped_summary, time_summary
 from visualizations import build_time_figure
-from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings
+from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -142,11 +143,15 @@ def read_upload(upload, sheet_name=None):
         except Exception:
             return pd.read_json(BytesIO(payload)), []
     if name.endswith(".tsv"):
-        return pd.read_csv(BytesIO(payload), sep="\\t"), []
+        return pd.read_csv(BytesIO(payload), sep="\\t", encoding="utf-8-sig"), []
     try:
-        return pd.read_csv(BytesIO(payload)), []
+        sample = payload[:8192].decode("utf-8-sig")
+        encoding = "utf-8-sig"
     except UnicodeDecodeError:
-        return pd.read_csv(BytesIO(payload), encoding="latin-1"), []
+        sample = payload[:8192].decode("latin-1")
+        encoding = "latin-1"
+    delimiter = detect_delimiter(sample)
+    return pd.read_csv(BytesIO(payload), sep=delimiter, encoding=encoding), []
 
 def fmt(value, decimals=2):
     if value is None or pd.isna(value):
