@@ -41,6 +41,7 @@ def test_theme_gallery_renders_all_choices_and_marks_the_active_theme():
     from visual_identity import theme_gallery_html
 
     gallery = theme_gallery_html("Botanical / nature", "Operations & service")
-    assert gallery.count('class="theme-preview') == 5
+    assert gallery.count('style="--preview-canvas:') == 5
+    assert 'class="theme-preview is-selected"' in gallery
     assert "Botanical" in gallery
     assert "is-selected" in gallery
