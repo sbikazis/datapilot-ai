@@ -17,6 +17,12 @@
 - HTML executive report, multi-sheet XLSX workbook, CSV extracts and JSON analysis profile.
 - A reusable statistical layer with deterministic tests for recommendations, summaries, correlations, category shares and insight evidence.
 
+## First-run experience
+
+Choose **Explore the sample dataset** on the welcome screen to open a reproducible, locally generated fictional orders dataset. It flows through the same profiling, guided analysis, decisions and reporting features as an uploaded file. The sample is clearly labeled synthetic and is not evidence about any real business or customer.
+
+Suggested first steps: compare revenue by region, inspect time movement, review order status and data quality, then export an executive report. Uploading your own file replaces the sample for that session.
+
 ## Run locally
 
 \`\`\`bash

@@ -22,6 +22,7 @@ from insight_actions import build_action_plan, action_plan_summary, action_plan_
 from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
+from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -46,6 +47,7 @@ defaults = {
     "active_filters": {},
     "role_overrides": {},
     "chart_type": "Recommended",
+    "use_sample_dataset": False,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -379,12 +381,21 @@ with upload_right:
     </div>
     """, unsafe_allow_html=True)
 if upload is not None:
+    st.session_state["use_sample_dataset"] = False
+    dataset_name = upload.name
+elif st.session_state.get("use_sample_dataset"):
+    dataset_name = "DataPilot sample · synthetic orders"
+else:
+    dataset_name = None
+
+if dataset_name is not None:
+    notice = "Synthetic sample · fictional records" if upload is None else "Dataset ready · processed in this session"
     st.markdown(
-        f'<div class="loaded-dataset"><span class="loaded-dot"></span><div><strong>{escape(upload.name)}</strong><div class="subtle">Dataset ready · processed in this session</div></div></div>',
+        f'<div class="loaded-dataset"><span class="loaded-dot"></span><div><strong>{escape(dataset_name)}</strong><div class="subtle">{notice}</div></div></div>',
         unsafe_allow_html=True,
     )
 
-if upload is None:
+if dataset_name is None:
     if page == "Settings":
         st.markdown("## Workspace settings")
         st.caption("These controls customize this active browser session. They do not create an account or persist across sessions.")
@@ -395,7 +406,14 @@ if upload is None:
     else:
         left, right = st.columns([1.15, .85], gap="large")
         with left:
-            st.markdown("## An analysis that adapts to your file")
+            st.markdown("## Start with a real analysis, even before you have a file")
+            st.write("Explore a fictional order dataset to see how profiling, guided analysis, evidence-ranked decisions and reports work end to end.")
+            if st.button("Explore the sample dataset", type="primary", use_container_width=True):
+                st.session_state["use_sample_dataset"] = True
+                st.session_state["nav_page"] = "Overview"
+                st.rerun()
+            st.caption("No upload required · generated locally · no external AI processing")
+            st.markdown("## Or bring your own data")
             st.write("Upload a dataset and DataPilot will profile its fields, check data quality, identify useful comparisons, and recommend a starting analysis. You stay in control of the definitions and calculations.")
             st.markdown('<div class="card"><div class="card-label">THE PRODUCT PRINCIPLE</div><div class="card-title">Your schema comes first.</div><div class="card-copy">A sales export, a customer table, an operations log and a workforce dataset should not receive the same canned dashboard. The detected structure shapes the available analysis.</div></div>', unsafe_allow_html=True)
         with right:
@@ -414,18 +432,18 @@ if upload is None:
                 st.markdown(f'<div class="card"><div class="card-title">{name}</div><div class="card-copy">{desc}</div></div>', unsafe_allow_html=True)
     st.stop()
 
-if upload is not None:
+if dataset_name is not None:
     # ── Load and profile ───────────────────────────────────────────────────────
     try:
         sheet_names = []
         chosen_sheet = None
-        if upload.name.lower().endswith((".xlsx", ".xls")):
+        if upload is not None and upload.name.lower().endswith((".xlsx", ".xls")):
             book = pd.ExcelFile(BytesIO(upload.getvalue()))
             sheet_names = book.sheet_names
             if "selected_sheet" not in st.session_state or st.session_state.selected_sheet not in sheet_names:
                 st.session_state.selected_sheet = sheet_names[0]
             chosen_sheet = st.session_state.selected_sheet
-        raw, _ = read_upload(upload, chosen_sheet)
+        raw = build_sample_dataset() if upload is None else read_upload(upload, chosen_sheet)[0]
         raw.columns = [str(c).strip() or f"unnamed_{i+1}" for i, c in enumerate(raw.columns)]
         if raw.empty:
             st.error("This file contains no data rows. Check the header row and selected sheet.")
@@ -443,6 +461,10 @@ if upload is not None:
         st.error(f"DataPilot could not read this file: {exc}")
         st.info("Check the file format, headers, worksheet and encoding. If it is a nested JSON export, try exporting it as a flat table.")
         st.stop()
+
+    if upload is None:
+        st.info(SAMPLE_DATASET_NOTICE)
+        st.caption("Try: compare revenue by region, inspect monthly movement, or review order status and data quality.")
 
     # Optional semantic role review; the raw file remains untouched.
     with st.sidebar:
@@ -556,7 +578,7 @@ if upload is not None:
     )
 
     # Common source context header
-    st.markdown(f'<div class="pagehead"><div><div class="kicker">{profile.dataset_kind} · DATASET PROFILE</div><h2 style="margin:3px 0">{upload.name}</h2><div class="subtle">{len(data):,} rows · {len(data.columns):,} fields · recommended starting point: {recommendation}</div></div><span class="pill">LIVE SESSION</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="pagehead"><div><div class="kicker">{profile.dataset_kind} · DATASET PROFILE</div><h2 style="margin:3px 0">{escape(dataset_name)}</h2><div class="subtle">{len(data):,} rows · {len(data.columns):,} fields · recommended starting point: {recommendation}</div></div><span class="pill">LIVE SESSION</span></div>', unsafe_allow_html=True)
 
     # ── Overview ───────────────────────────────────────────────────────────────
     if page == "Overview":
@@ -1129,7 +1151,7 @@ if upload is not None:
         report_data = build_report_data(
             data, filtered, numeric_cols, profile.columns, profile.quality,
             report_findings, next_questions, st.session_state.active_filters,
-            title=report_title, dataset=upload.name, domain=profile.dataset_kind,
+            title=report_title, dataset=dataset_name, domain=profile.dataset_kind,
             workspace=st.session_state.workspace_name,
             precision=st.session_state.get("precision", 2),
         )
