@@ -179,3 +179,46 @@ def detect_delimiter(sample: str) -> str:
         return dialect.delimiter
     except csv.Error:
         return ","
+
+
+
+def _selection_points(event) -> list:
+    if event is None:
+        return []
+    selection = event.get("selection", {}) if isinstance(event, dict) else getattr(event, "selection", None)
+    if selection is None:
+        return []
+    points = selection.get("points", []) if isinstance(selection, dict) else getattr(selection, "points", [])
+    return list(points or [])
+
+
+def selected_point_values(event, candidate_fields: Iterable[str]) -> list[str]:
+    """Extract selected categorical labels from a Streamlit Plotly selection event."""
+    values = []
+    for point in _selection_points(event):
+        for field in candidate_fields:
+            value = point.get(field) if isinstance(point, dict) else getattr(point, field, None)
+            if value is not None:
+                text = str(value)
+                if text not in values:
+                    values.append(text)
+                break
+    return values
+
+
+def selected_point_indices(event) -> list[int]:
+    """Extract unique point indexes for row-level scatter-plot drill-down."""
+    indexes = []
+    for point in _selection_points(event):
+        value = None
+        for field in ("point_index", "pointIndex", "point_number", "pointNumber"):
+            value = point.get(field) if isinstance(point, dict) else getattr(point, field, None)
+            if value is not None:
+                break
+        try:
+            index = int(value)
+        except (TypeError, ValueError):
+            continue
+        if index >= 0 and index not in indexes:
+            indexes.append(index)
+    return indexes
