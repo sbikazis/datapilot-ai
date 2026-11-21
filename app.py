@@ -598,7 +598,7 @@ if dataset_name is not None:
         build_theme_css(active_visual_theme, st.session_state.theme_mode, st.session_state.density),
         unsafe_allow_html=True,
     )
-    chart_colors = theme_chart_colors(active_visual_theme)
+    chart_colors = theme_chart_colors(active_visual_theme, st.session_state.theme_mode)
     plot_text = active_visual_theme["dark" if st.session_state.theme_mode == "Dark" else "light"]["text"]
     plot_grid = active_visual_theme["dark" if st.session_state.theme_mode == "Dark" else "light"]["line"]
     px.defaults.color_discrete_sequence = chart_colors
