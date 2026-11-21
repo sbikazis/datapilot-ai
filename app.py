@@ -143,7 +143,7 @@ def read_upload(upload, sheet_name=None):
         except Exception:
             return pd.read_json(BytesIO(payload)), []
     if name.endswith(".tsv"):
-        return pd.read_csv(BytesIO(payload), sep="\\t", encoding="utf-8-sig"), []
+        return pd.read_csv(BytesIO(payload), sep="\t", encoding="utf-8-sig"), []
     try:
         sample = payload[:8192].decode("utf-8-sig")
         encoding = "utf-8-sig"
