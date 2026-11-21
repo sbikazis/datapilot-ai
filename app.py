@@ -25,6 +25,7 @@ from semantic_engine import infer_semantic_fields
 from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
 from navigation_state import activate_sample_workspace
+from upload_intelligence import read_dataset_upload, upload_preview
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -272,33 +273,9 @@ st.markdown(
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 def read_upload(upload, sheet_name=None):
-    name = upload.name.lower()
-    payload = upload.getvalue()
-    if name.endswith(".xlsx") or name.endswith(".xls"):
-        book = pd.ExcelFile(BytesIO(payload))
-        selected = sheet_name if sheet_name in book.sheet_names else book.sheet_names[0]
-        return pd.read_excel(BytesIO(payload), sheet_name=selected), book.sheet_names
-    if name.endswith(".json"):
-        try:
-            parsed = json.loads(payload.decode("utf-8-sig"))
-            if isinstance(parsed, dict):
-                for key in ("data", "records", "results", "items"):
-                    if isinstance(parsed.get(key), list):
-                        parsed = parsed[key]
-                        break
-            return pd.json_normalize(parsed), []
-        except Exception:
-            return pd.read_json(BytesIO(payload)), []
-    if name.endswith(".tsv"):
-        return pd.read_csv(BytesIO(payload), sep="\t", encoding="utf-8-sig"), []
-    try:
-        sample = payload[:8192].decode("utf-8-sig")
-        encoding = "utf-8-sig"
-    except UnicodeDecodeError:
-        sample = payload[:8192].decode("latin-1")
-        encoding = "latin-1"
-    delimiter = detect_delimiter(sample)
-    return pd.read_csv(BytesIO(payload), sep=delimiter, encoding=encoding), []
+    frame, metadata = read_dataset_upload(upload.name, upload.getvalue(), sheet_name)
+    st.session_state["_upload_diagnostics"] = metadata
+    return frame, metadata.get("sheets", [])
 
 def fmt(value, decimals=None):
     decimals = st.session_state.get("precision", 2) if decimals is None else decimals
@@ -520,6 +497,32 @@ if dataset_name is not None:
         semantic_by_column = {item["column"]: item for item in infer_semantic_fields(raw)}
         for field_meta in profile.columns:
             field_meta.update(semantic_by_column.get(field_meta["column"], {}))
+        if upload is not None:
+            intake = st.session_state.get("_upload_diagnostics", {})
+            st.markdown("### File intake · source validation")
+            intake_cols = st.columns(4)
+            intake_cols[0].metric("Rows read", f"{intake.get('rows', len(raw)):,}")
+            intake_cols[1].metric("Columns read", f"{intake.get('columns', len(raw.columns)):,}")
+            intake_cols[2].metric("Exact duplicate rows", f"{intake.get('duplicate_rows', 0):,}")
+            intake_cols[3].metric("Empty columns", f"{len(intake.get('empty_columns', [])):,}")
+            details = [f"Format: {intake.get('format', 'Unknown')}"]
+            if intake.get("encoding"):
+                details.append(f"Encoding: {intake['encoding']}")
+            if intake.get("delimiter"):
+                details.append(f"Delimiter: {intake['delimiter']}")
+            if intake.get("selected_sheet"):
+                details.append(f"Worksheet: {intake['selected_sheet']}")
+            st.caption(" · ".join(details) + " · Preview is read-only; source values are not automatically repaired.")
+            warnings = intake.get("warnings", [])
+            if warnings:
+                with st.expander(f"Review {len(warnings)} intake warning(s)", expanded=True):
+                    for warning in warnings:
+                        st.warning(warning)
+            else:
+                st.success("No structural intake warnings detected. Review the preview before interpreting the analysis.")
+            with st.expander("Preview source rows and detected headers", expanded=False):
+                st.dataframe(upload_preview(raw, 8), use_container_width=True, hide_index=True)
+                st.caption("This preview shows the parsed source values before analytical field-role conversion.")
     except Exception as exc:
         st.error(f"DataPilot could not read this file: {exc}")
         st.info("Check the file format, headers, worksheet and encoding. If it is a nested JSON export, try exporting it as a flat table.")
