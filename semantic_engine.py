@@ -21,6 +21,8 @@ def infer_semantic_fields(frame: pd.DataFrame) -> list[dict[str, Any]]:
         values = series.dropna()
         text_values = values.astype(str).str.strip().str.lower()
         unique = set(text_values.unique().tolist())
+        tokens = set(name.split("_"))
+        currency_symbols = bool(len(text_values) and text_values.str.contains(r"[$€£¥]", regex=True).mean() >= 0.5)
         semantic = "Text / category"
         confidence = "medium"
         reason = "No stronger semantic signal was detected."
@@ -29,8 +31,8 @@ def infer_semantic_fields(frame: pd.DataFrame) -> list[dict[str, Any]]:
         if pd.api.types.is_datetime64_any_dtype(series) or any(token in name for token in ("date", "timestamp", "datetime", "created_at", "updated_at")):
             semantic, confidence = "Date / time", "high"
             reason = "The field name or stored dtype indicates a temporal value."
-        elif any(token in name for token in ("latitude", "longitude", "lat", "lon", "lng")):
-            semantic, confidence = ("Latitude" if any(t in name for t in ("latitude", "lat")) else "Longitude"), "high"
+        elif any(token in tokens for token in ("latitude", "lat", "longitude", "lon", "lng")):
+            semantic, confidence = ("Latitude" if any(t in tokens for t in ("latitude", "lat")) else "Longitude"), "high"
             reason = "The field name explicitly identifies a geographic coordinate."
             unit_hint = "Decimal degrees (verify coordinate reference)"
         elif any(token in name for token in ("email", "e_mail")):
@@ -50,7 +52,7 @@ def infer_semantic_fields(frame: pd.DataFrame) -> list[dict[str, Any]]:
             semantic, confidence = "Duration", "high"
             reason = "The field name indicates elapsed time or duration."
             unit_hint = "Unit inferred only from the column name; verify"
-        elif any(token in name for token in CURRENCY_HINTS) or text_values.str.contains(r"[$€£¥]", regex=True).mean() >= 0.5 if len(text_values) else any(token in name for token in CURRENCY_HINTS):
+        elif any(token in tokens for token in CURRENCY_HINTS) or currency_symbols:
             semantic, confidence = "Currency-like amount", "medium"
             reason = "The field name or values suggest an amount, but the currency is unknown."
             unit_hint = "Currency not identified"
