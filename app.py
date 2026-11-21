@@ -172,6 +172,13 @@ button[kind="primary"]:hover{background:#116b71!important}
 .format-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .format-list span{background:#f0f4f6;border:1px solid #e2e9ed;color:#4c6271;border-radius:5px;padding:4px 8px;font-size:.7rem;font-weight:700}
 .loaded-dataset{display:flex;align-items:center;gap:11px;background:#edf7f5;border:1px solid #cfe6df;border-radius:9px;padding:11px 14px;margin:10px 0 18px}
+.workspace-topbar{min-height:88px;display:flex;align-items:center;justify-content:space-between;gap:18px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:15px 19px;margin:0 0 18px}
+.workspace-filename{font-family:Manrope,sans-serif;font-size:1.12rem;font-weight:750;letter-spacing:-.025em;color:var(--ink);margin-top:3px;overflow-wrap:anywhere}
+.workspace-detail{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:.78rem;margin-top:4px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#258b72;display:inline-block}
+.workspace-session{font-size:.65rem;font-weight:700;letter-spacing:.1em;color:#637584;background:#f1f5f7;border:1px solid #e2e9ed;border-radius:6px;padding:6px 9px;white-space:nowrap}
+.replace-label{font-size:.66rem;font-weight:700;letter-spacing:.1em;color:#718191;margin:2px 0 6px}
+
 .loaded-dot{width:8px;height:8px;border-radius:50%;background:#258b72}
 .overview-intro{color:#617282}
 .overview-live{display:inline-block;background:#eaf5f2;color:#24745f;border:1px solid #d3e9e1;border-radius:5px;padding:4px 8px;font-size:.68rem;font-weight:700}
@@ -204,6 +211,11 @@ if st.session_state.theme_mode == "Dark":
     .next-step strong{color:#edf0ff!important}
     .health-track{background:#303b55!important}
     .loaded-dataset{background:#192238!important;border-color:#2c5b51!important}
+    .workspace-topbar{background:#192238!important;border-color:#2c3854!important}
+    .workspace-filename{color:#edf0ff!important}
+    .workspace-detail,.replace-label{color:#aab5ce!important}
+    .workspace-session{background:#29354f!important;border-color:#3b4866!important;color:#c0c9df!important}
+
     .overview-live{background:#17352f!important;border-color:#285c50!important;color:#a5e4cf!important}
     .signal-meta span{background:#29354f!important;color:#c0c9df!important}
     .pagehead,.upload-panel,.upload-guidance,.signal-card{background:#192238!important;border-color:#2c3854!important}
@@ -342,44 +354,72 @@ with st.sidebar:
     st.caption(st.session_state.workspace_name)
     st.caption("Session workspace · preferences are not synced to an account")
 
-# ── Welcome / no-data state ─────────────────────────────────────────────────
-st.markdown(f"""
-<div class="hero">
- <div class="eyebrow">ADAPTIVE DATA INTELLIGENCE · {st.session_state.workspace_name.upper()}</div>
- <h1>Make your data make sense.</h1>
- <p>Explore the signals, compare what matters, understand data quality, and turn evidence into your next question — with analysis shaped around the file you bring.</p>
- <div class="hero-meta">DISCOVER &nbsp;·&nbsp; INVESTIGATE &nbsp;·&nbsp; EXPLAIN &nbsp;·&nbsp; DECIDE</div>
-</div>
-""", unsafe_allow_html=True)
+# ── Workspace entry / active dataset shell ───────────────────────────────────
+# Keep a single uploader widget so Streamlit retains the selected file across reruns.
+existing_upload = st.session_state.get("workspace_dataset_upload")
+has_active_dataset = existing_upload is not None or st.session_state.get("use_sample_dataset", False)
 
-# Primary upload action belongs in the workspace, not hidden in the sidebar.
-upload_left, upload_right = st.columns([1.35, .65], gap="large")
-with upload_left:
-    st.markdown("""
-    <div class="upload-panel">
-      <div class="kicker">START YOUR ANALYSIS</div>
-      <h2 style="margin:5px 0 7px">Bring your dataset into DataPilot</h2>
-      <p class="subtle" style="margin:0">Drop a file here or browse your device. Your original values remain the source of truth.</p>
+if not has_active_dataset:
+    st.markdown(f"""
+    <div class="hero">
+      <div class="eyebrow">DATA INTELLIGENCE WORKSPACE · {escape(st.session_state.workspace_name.upper())}</div>
+      <h1>Clarity starts with your data.</h1>
+      <p>Bring a dataset into a focused workspace to inspect its structure, find meaningful signals, and turn evidence into your next decision.</p>
+      <div class="hero-meta">PROFILE &nbsp;·&nbsp; INVESTIGATE &nbsp;·&nbsp; EXPLAIN &nbsp;·&nbsp; EXPORT</div>
     </div>
     """, unsafe_allow_html=True)
-    upload = st.file_uploader(
-        "Choose a dataset",
-        type=["csv", "tsv", "xlsx", "xls", "json"],
-        help="Supported formats: CSV, TSV, Excel and JSON",
-        key="workspace_dataset_upload",
-        label_visibility="collapsed",
-    )
-with upload_right:
-    st.markdown("""
-    <div class="upload-guidance">
-      <div class="card-label">SUPPORTED FORMATS</div>
-      <div class="format-list"><span>CSV</span><span>TSV</span><span>XLSX</span><span>XLS</span><span>JSON</span></div>
-      <div class="sectionline"></div>
-      <div class="card-label">YOUR DATA</div>
-      <p class="card-copy">Files are processed in this active app session. Avoid uploading sensitive personal or confidential data.</p>
-      <p class="card-copy">No account, cloud project or external AI processing is implied.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    upload_left, upload_right = st.columns([1.35, .65], gap="large")
+    with upload_left:
+        st.markdown("""
+        <div class="upload-panel">
+          <div class="kicker">NEW ANALYSIS</div>
+          <h2>Choose a dataset</h2>
+          <p class="subtle" style="margin:0">Start with a file from your device. Your original values remain the source of truth.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        upload = st.file_uploader(
+            "Choose a dataset",
+            type=["csv", "tsv", "xlsx", "xls", "json"],
+            help="Supported formats: CSV, TSV, Excel and JSON",
+            key="workspace_dataset_upload",
+            label_visibility="collapsed",
+        )
+    with upload_right:
+        st.markdown("""
+        <div class="upload-guidance">
+          <div class="card-label">SUPPORTED FORMATS</div>
+          <div class="format-list"><span>CSV</span><span>TSV</span><span>XLSX</span><span>XLS</span><span>JSON</span></div>
+          <div class="sectionline"></div>
+          <div class="card-label">DATA HANDLING</div>
+          <p class="card-copy">Files are processed in this active app session. Avoid uploading sensitive personal or confidential data.</p>
+          <p class="card-copy">No account, cloud project or external AI processing is implied.</p>
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    active_name = existing_upload.name if existing_upload is not None else "DataPilot sample · synthetic orders"
+    active_detail = "Uploaded file · active session" if existing_upload is not None else "Synthetic sample · fictional records"
+    top_left, top_right = st.columns([1.6, .8], gap="medium")
+    with top_left:
+        st.markdown(f"""
+        <div class="workspace-topbar">
+          <div class="workspace-context">
+            <div class="kicker">ACTIVE DATASET</div>
+            <div class="workspace-filename">{escape(active_name)}</div>
+            <div class="workspace-detail"><span class="status-dot"></span>{active_detail}</div>
+          </div>
+          <div class="workspace-session">SESSION WORKSPACE</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with top_right:
+        st.markdown('<div class="replace-label">CHANGE DATASET</div>', unsafe_allow_html=True)
+        upload = st.file_uploader(
+            "Replace dataset",
+            type=["csv", "tsv", "xlsx", "xls", "json"],
+            help="Choose another CSV, TSV, Excel or JSON file",
+            key="workspace_dataset_upload",
+            label_visibility="collapsed",
+        )
+
 if upload is not None:
     st.session_state["use_sample_dataset"] = False
     dataset_name = upload.name
@@ -387,13 +427,6 @@ elif st.session_state.get("use_sample_dataset"):
     dataset_name = "DataPilot sample · synthetic orders"
 else:
     dataset_name = None
-
-if dataset_name is not None:
-    notice = "Synthetic sample · fictional records" if upload is None else "Dataset ready · processed in this session"
-    st.markdown(
-        f'<div class="loaded-dataset"><span class="loaded-dot"></span><div><strong>{escape(dataset_name)}</strong><div class="subtle">{notice}</div></div></div>',
-        unsafe_allow_html=True,
-    )
 
 if dataset_name is None:
     if page == "Settings":
