@@ -111,3 +111,34 @@ def test_decimal_comma_and_thousands_separators():
 def test_duplicate_order_ids_are_counted_once():
     result = analyze_sales(sample())
     assert result.summary["order_count"] == 3
+
+
+def test_full_twenty_row_demo_file_is_fully_accepted_with_expected_totals():
+    frame = pd.DataFrame({
+        "order_id": [f"ORD-{1001+i}" for i in range(20)],
+        "order_date": [f"2026-10-{day:02d}" for day in range(1, 21)],
+        "product": [
+            "Wireless Mouse", "Notebook A5", "USB-C Cable", "Coffee Mug", "Desk Lamp",
+            "Wireless Mouse", "Notebook A5", "Phone Stand", "USB-C Cable", "Water Bottle",
+            "Coffee Mug", "Desk Lamp", "Notebook A5", "Phone Stand", "Wireless Mouse",
+            "Water Bottle", "USB-C Cable", "Coffee Mug", "Desk Lamp", "Notebook A5",
+        ],
+        "category": [
+            "Electronics", "Stationery", "Electronics", "Home", "Home",
+            "Electronics", "Stationery", "Accessories", "Electronics", "Accessories",
+            "Home", "Home", "Stationery", "Accessories", "Electronics",
+            "Accessories", "Electronics", "Home", "Home", "Stationery",
+        ],
+        "quantity": [2,5,3,4,1,1,8,2,6,3,2,2,4,5,3,2,4,3,1,6],
+        "unit_price": [18.5,3.2,7.9,6.5,32,18.5,3.2,11,7.9,14,6.5,32,3.2,11,18.5,14,7.9,6.5,32,3.2],
+        "unit_cost": [9,1.1,3.25,2.4,18,9,1.1,4.5,3.25,6.75,2.4,18,1.1,4.5,9,6.75,3.25,2.4,18,1.1],
+    })
+    result = analyze_sales(frame)
+    assert result.summary["valid_rows"] == 20
+    assert result.summary["rejected_rows"] == 0
+    assert result.summary["total_revenue"] == pytest.approx(620.80)
+    assert result.summary["total_cost"] == pytest.approx(280.40)
+    assert result.summary["gross_profit"] == pytest.approx(340.40)
+    assert result.summary["gross_margin_pct"] == pytest.approx(54.8324742268)
+    assert result.summary["order_count"] == 20
+    assert result.summary["average_order_value"] == pytest.approx(31.04)
