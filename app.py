@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from html import escape
 from io import BytesIO
-import csv
 import json
 import re
 
@@ -20,7 +19,7 @@ from report_intelligence import build_report_data, render_html_report, report_wo
 from guided_analysis import available_guided_paths, build_guided_result
 from insight_actions import build_action_plan, action_plan_summary, action_plan_frame
 from visualizations import build_time_figure
-from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, detect_delimiter, selected_point_values, selected_point_indices
+from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
 from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
