@@ -282,35 +282,34 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Primary upload action belongs in the workspace, not hidden in the sidebar.
-if upload is None:
-    upload_left, upload_right = st.columns([1.35, .65], gap="large")
-    with upload_left:
-        st.markdown("""
-        <div class="upload-panel">
-          <div class="kicker">START YOUR ANALYSIS</div>
-          <h2 style="margin:5px 0 7px">Bring your dataset into DataPilot</h2>
-          <p class="subtle" style="margin:0">Drop a file here or browse your device. Your original values remain the source of truth.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        upload = st.file_uploader(
-            "Choose a dataset",
-            type=["csv", "tsv", "xlsx", "xls", "json"],
-            help="Supported formats: CSV, TSV, Excel and JSON",
-            key="workspace_dataset_upload",
-            label_visibility="collapsed",
-        )
-    with upload_right:
-        st.markdown("""
-        <div class="upload-guidance">
-          <div class="card-label">SUPPORTED FORMATS</div>
-          <div class="format-list"><span>CSV</span><span>TSV</span><span>XLSX</span><span>XLS</span><span>JSON</span></div>
-          <div class="sectionline"></div>
-          <div class="card-label">YOUR DATA</div>
-          <p class="card-copy">Files are processed in this active app session. Avoid uploading sensitive personal or confidential data.</p>
-          <p class="card-copy">No account, cloud project or external AI processing is implied.</p>
-        </div>
-        """, unsafe_allow_html=True)
-else:
+upload_left, upload_right = st.columns([1.35, .65], gap="large")
+with upload_left:
+    st.markdown("""
+    <div class="upload-panel">
+      <div class="kicker">START YOUR ANALYSIS</div>
+      <h2 style="margin:5px 0 7px">Bring your dataset into DataPilot</h2>
+      <p class="subtle" style="margin:0">Drop a file here or browse your device. Your original values remain the source of truth.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    upload = st.file_uploader(
+        "Choose a dataset",
+        type=["csv", "tsv", "xlsx", "xls", "json"],
+        help="Supported formats: CSV, TSV, Excel and JSON",
+        key="workspace_dataset_upload",
+        label_visibility="collapsed",
+    )
+with upload_right:
+    st.markdown("""
+    <div class="upload-guidance">
+      <div class="card-label">SUPPORTED FORMATS</div>
+      <div class="format-list"><span>CSV</span><span>TSV</span><span>XLSX</span><span>XLS</span><span>JSON</span></div>
+      <div class="sectionline"></div>
+      <div class="card-label">YOUR DATA</div>
+      <p class="card-copy">Files are processed in this active app session. Avoid uploading sensitive personal or confidential data.</p>
+      <p class="card-copy">No account, cloud project or external AI processing is implied.</p>
+    </div>
+    """, unsafe_allow_html=True)
+if upload is not None:
     st.markdown(
         f'<div class="loaded-dataset"><span class="loaded-dot"></span><div><strong>{escape(upload.name)}</strong><div class="subtle">Dataset ready · processed in this session</div></div></div>',
         unsafe_allow_html=True,
