@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 
 
-CURRENCY_HINTS = ("amount", "revenue", "sales", "price", "cost", "profit", "budget", "spend", "salary", "wage", "balance", "subtotal", "total")
+CURRENCY_HINTS = ("amount", "revenue", "sales", "price", "cost", "profit", "budget", "spend", "salary", "wage", "balance", "subtotal")
 PERCENT_HINTS = ("percent", "percentage", "pct", "margin", "rate", "ratio", "share", "conversion")
 DURATION_HINTS = ("duration", "elapsed", "latency", "runtime", "time_spent", "seconds", "minutes", "hours", "days_to")
 ID_HINTS = ("id", "uuid", "sku", "code", "account", "phone", "postal", "zip")
@@ -28,17 +28,17 @@ def infer_semantic_fields(frame: pd.DataFrame) -> list[dict[str, Any]]:
         reason = "No stronger semantic signal was detected."
         unit_hint = "Not inferred"
 
-        if pd.api.types.is_datetime64_any_dtype(series) or any(token in name for token in ("date", "timestamp", "datetime", "created_at", "updated_at")):
+        if pd.api.types.is_datetime64_any_dtype(series) or any(token in tokens for token in ("date", "timestamp", "datetime", "created", "updated")):
             semantic, confidence = "Date / time", "high"
             reason = "The field name or stored dtype indicates a temporal value."
         elif any(token in tokens for token in ("latitude", "lat", "longitude", "lon", "lng")):
             semantic, confidence = ("Latitude" if any(t in tokens for t in ("latitude", "lat")) else "Longitude"), "high"
             reason = "The field name explicitly identifies a geographic coordinate."
             unit_hint = "Decimal degrees (verify coordinate reference)"
-        elif any(token in name for token in ("email", "e_mail")):
+        elif any(token in tokens for token in ("email", "e_mail")):
             semantic, confidence = "Email identifier", "high"
             reason = "The field name indicates an email address; treat values as personal data."
-        elif any(token in name for token in ("url", "website", "web_link")):
+        elif any(token in tokens for token in ("url", "website", "web_link")):
             semantic, confidence = "URL / link", "high"
             reason = "The field name indicates a web address."
         elif pd.api.types.is_bool_dtype(series) or (unique and unique.issubset({"true", "false", "yes", "no", "y", "n"})):
@@ -56,13 +56,13 @@ def infer_semantic_fields(frame: pd.DataFrame) -> list[dict[str, Any]]:
             semantic, confidence = "Currency-like amount", "medium"
             reason = "The field name or values suggest an amount, but the currency is unknown."
             unit_hint = "Currency not identified"
-        elif any(token in name for token in ("phone", "mobile", "telephone")):
+        elif any(token in tokens for token in ("phone", "mobile", "telephone")):
             semantic, confidence = "Phone identifier", "high"
             reason = "The field name indicates a phone/contact identifier; treat values as personal data."
-        elif any(token in name for token in ("postal", "postcode", "zip")):
+        elif any(token in tokens for token in ("postal", "postcode", "zip")):
             semantic, confidence = "Postal code", "high"
             reason = "The field name indicates a postal identifier; preserve leading zeros."
-        elif any(token in name for token in ID_HINTS):
+        elif any(token in tokens for token in ID_HINTS):
             semantic, confidence = "Identifier / code", "high"
             reason = "The field name suggests an identifier rather than a measure."
         elif pd.api.types.is_numeric_dtype(series):
