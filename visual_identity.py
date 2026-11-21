@@ -53,11 +53,10 @@ def resolve_theme(choice: str, domain: str) -> dict:
             return theme
     return THEMES["Nebula / sci-fi"]
 
-def theme_chart_colors(theme: dict) -> list[str]:
-    """Return a readable categorical palette for Plotly."""
-    light = theme["light"]
-    dark = theme["dark"]
-    return [light["accent"], light["accent_2"], "#8b78b8", "#d18c50", "#5b8c78", "#bd7184", "#6687a8"]
+def theme_chart_colors(theme: dict, mode: str = "Light") -> list[str]:
+    """Return a readable categorical palette for the active appearance."""
+    palette = theme["dark" if mode == "Dark" else "light"]
+    return [palette["accent"], palette["accent_2"], "#a18bd0", "#d99a60", "#6ca98b", "#d17f96", "#7ea4c8"]
 
 def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortable") -> str:
     """Build a responsive, contrast-aware stylesheet from a visual theme."""
@@ -96,9 +95,9 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
 [data-testid="stMetric"]{background:linear-gradient(145deg,var(--surface),var(--surface-2))!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:__CARDPAD__!important;box-shadow:0 8px 24px color-mix(in srgb,var(--text) 5%,transparent);min-height:96px}
 [data-testid="stMetricLabel"]{color:var(--muted)!important;font-weight:650}
 [data-testid="stMetricValue"]{color:var(--text)!important;font-weight:780}
-.card,.insight,.signal-card,.health-card,.domain-card,.pagehead,.upload-panel,.upload-guidance,.workspace-topbar{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:__CARDPAD__;box-shadow:0 8px 28px color-mix(in srgb,var(--text) 4%,transparent)}
-.card-title,.insight strong,.signal-title,.health-heading strong,.health-row strong,.health-row b,.workspace-filename{color:var(--text)!important}
-.card-copy,.insight p,.signal-card p,.health-row span,.health-foot,.workspace-detail{color:var(--muted)!important}
+.card,.insight,.signal-card,.health-card,.domain-card,.pagehead,.upload-panel,.upload-guidance,.workspace-topbar{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:__CARDPAD__;box-shadow:0 8px 28px color-mix(in srgb,var(--text) 4%,transparent)}
+.card:hover,.signal-card:hover,.domain-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px color-mix(in srgb,var(--text) 8%,transparent)}\n.card-title,.insight strong,.signal-title,.health-heading strong,.health-row strong,.health-row b,.workspace-filename{color:var(--text)!important}
+.card-copy,.insight p,.signal-card p,.signal-next,.health-row span,.health-foot,.workspace-detail{color:var(--muted)!important}
 .kicker,.card-label,.replace-label,.brandtag{color:var(--muted)!important;letter-spacing:.13em;font-weight:750}
 .brandmark{background:linear-gradient(135deg,var(--accent),var(--accent-2))!important;box-shadow:0 6px 22px var(--glow);border-radius:12px}
 .brandname{color:var(--sidebar-text)!important}
@@ -110,11 +109,11 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
 .hero-meta{color:color-mix(in srgb,#fff 72%,var(--accent-2));font-weight:750;letter-spacing:.13em}
 .pagehead h2,.upload-panel h2{color:var(--text)!important}
 .upload-panel p,.upload-guidance p,.pagehead .subtle{color:var(--muted)!important}
-.dataset-summary>span,.format-list span,.signal-meta span,.signal-index,.signal-kind,.pill,.workspace-session{background:var(--surface-2)!important;color:var(--muted)!important;border:1px solid var(--line)!important;border-radius:8px}
+.dataset-summary>span,.format-list span,.signal-meta span,.signal-index,.signal-kind,.pill,.workspace-session,.insight .kind,.insight .next{background:var(--surface-2)!important;color:var(--muted)!important;border:1px solid var(--line)!important;border-radius:8px}
 .dataset-summary .dataset-kind{background:var(--accent-soft)!important;color:var(--accent)!important;border-color:color-mix(in srgb,var(--accent) 25%,var(--line))!important}
 .next-step{background:var(--accent-soft)!important;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line))!important;border-radius:12px}
 .next-step strong{color:var(--accent)!important}
-.health-track{background:var(--surface-2)!important}.health-track>span{background:linear-gradient(90deg,var(--accent),var(--accent-2))!important}
+.overview-live{background:var(--accent-soft)!important;color:var(--accent)!important;border-color:var(--line)!important}\n.health-track{background:var(--surface-2)!important}.health-track>span{background:linear-gradient(90deg,var(--accent),var(--accent-2))!important}
 .sectionline{background:var(--line)!important}
 .stButton>button,.stDownloadButton>button{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--line)!important;border-radius:11px!important;font-weight:680;min-height:2.55rem;transition:transform .18s,box-shadow .18s,border-color .18s}
 .stButton>button:hover,.stDownloadButton>button:hover{border-color:var(--accent)!important;box-shadow:0 8px 22px var(--glow);transform:translateY(-1px)}
