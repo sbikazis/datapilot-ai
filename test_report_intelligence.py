@@ -70,3 +70,31 @@ def test_invalid_precision_is_rejected(precision):
     frame = pd.DataFrame({"x": [1]})
     with pytest.raises(ValueError):
         build_report_data(frame, frame, ["x"], [], {}, [], [], precision=precision)
+
+
+def test_client_ready_metadata_is_trimmed_escaped_and_included_in_workbook(report):
+    from report_intelligence import render_html_report, report_workbook_sheets
+
+    report["prepared_for"] = "  Acme <Research>  "
+    report["prepared_by"] = "  Analyst One  "
+    report["analyst_note"] = "Context: <script>alert('x')</script> — validate Q4 scope."
+    html = render_html_report(report)
+    assert "Prepared for Acme &lt;Research&gt;" in html
+    assert "Prepared by Analyst One" in html
+    assert "<script>alert('x')</script>" not in html
+    assert "Provided by the report author" in html
+    summary = report_workbook_sheets(report)["Executive summary"].iloc[0]
+    assert summary["prepared_for"] == "  Acme <Research>  "
+    assert summary["prepared_by"] == "  Analyst One  "
+    assert summary["analyst_note"].startswith("Context:")
+
+
+def test_client_ready_metadata_defaults_empty_and_respects_length_limits():
+    frame = pd.DataFrame({"value": [1, 2]})
+    report = build_report_data(
+        frame, frame, ["value"], [], {}, [], [],
+        prepared_for="x" * 140, prepared_by="y" * 100, analyst_note="z" * 1300,
+    )
+    assert report["prepared_for"] == "x" * 120
+    assert report["prepared_by"] == "y" * 80
+    assert report["analyst_note"] == "z" * 1200
