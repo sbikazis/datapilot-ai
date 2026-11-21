@@ -44,6 +44,74 @@ def map_columns(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     return frame.rename(columns=mapping).copy(), mapping
 
 
+def _parse_dates(values: pd.Series) -> pd.Series:
+    """Parse ISO dates first; use day-first parsing only for non-ISO values.
+
+    This avoids pandas interpreting YYYY-MM-DD as DD-MM-YYYY when dayfirst=True.
+    """
+    text = values.astype("string").str.strip()
+    parsed = pd.Series(pd.NaT, index=values.index, dtype="datetime64[ns]")
+    iso_mask = text.str.match(r"^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$", na=False)
+    if iso_mask.any():
+        parsed.loc[iso_mask] = pd.to_datetime(text.loc[iso_mask], errors="coerce", format="mixed")
+    remaining = ~iso_mask
+    if remaining.any():
+        parsed.loc[remaining] = pd.to_datetime(
+            text.loc[remaining], errors="coerce", dayfirst=True, format="mixed"
+        )
+    # Preserve already-parsed datetime objects if the source was an Excel date column.
+    original_dates = pd.to_datetime(values.loc[values.map(lambda x: isinstance(x, (pd.Timestamp,))),], errors="coerce")
+    if not original_dates.empty:
+        parsed.loc[original_dates.index] = original_dates
+    return parsed
+
+
+def _parse_number(value: object) -> float:
+    """Parse common decimal/thousands conventions; malformed values become NaN."""
+    if pd.isna(value):
+        return float("nan")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    text = str(value).strip().replace("\u00a0", "").replace(" ", "")
+    if not text:
+        return float("nan")
+    negative = text.startswith("(") and text.endswith(")")
+    if negative:
+        text = text[1:-1]
+    text = re.sub(r"[^\d,.\-+]", "", text)
+    if not text or text in {"-", "+", ".", ","}:
+        return float("nan")
+
+    if "," in text and "." in text:
+        decimal_mark = "," if text.rfind(",") > text.rfind(".") else "."
+        thousands_mark = "." if decimal_mark == "," else ","
+        text = text.replace(thousands_mark, "").replace(decimal_mark, ".")
+    elif "," in text:
+        parts = text.split(",")
+        if len(parts) == 2 and len(parts[1]) in (1, 2):
+            text = ".".join(parts)
+        elif len(parts) > 1 and 1 <= len(parts[0]) <= 3 and all(len(part) == 3 for part in parts[1:]):
+            text = "".join(parts)
+        else:
+            return float("nan")
+    elif "." in text:
+        parts = text.split(".")
+        if len(parts) == 2:
+            if len(parts[1]) == 3 and 1 <= len(parts[0]) <= 3:
+                text = "".join(parts)
+        elif len(parts) > 2 and 1 <= len(parts[0]) <= 3 and all(len(part) == 3 for part in parts[1:]):
+            text = "".join(parts)
+        else:
+            return float("nan")
+
+    if not re.fullmatch(r"[+-]?\d+(?:\.\d+)?", text):
+        return float("nan")
+    try:
+        number = float(text)
+    except ValueError:
+        return float("nan")
+    return -number if negative else number
+
 def load_sales_file(file: str | BinaryIO | BytesIO, filename: str | None = None) -> pd.DataFrame:
     """Load CSV or Excel without guessing a currency."""
     name = (filename or getattr(file, "name", "")).lower()
@@ -90,14 +158,15 @@ def analyze_sales(frame: pd.DataFrame) -> AnalysisResult:
             if bad:
                 reasons[pos].append(f"{column} is missing")
 
-    parsed_dates = pd.to_datetime(work["order_date"], errors="coerce", dayfirst=True)
+    parsed_dates = _parse_dates(work["order_date"])
     for pos, bad in enumerate(parsed_dates.isna().tolist()):
         if bad:
             reasons[pos].append("order_date is missing or invalid")
     work["order_date"] = parsed_dates
 
     for column in ["quantity", "unit_price", "unit_cost"]:
-        work[column] = pd.to_numeric(work[column], errors="coerce")
+        original = work[column].copy()
+        work[column] = original.map(_parse_number)
         for pos, value in enumerate(work[column].tolist()):
             if pd.isna(value):
                 reasons[pos].append(f"{column} is missing or not numeric")
@@ -120,11 +189,18 @@ def analyze_sales(frame: pd.DataFrame) -> AnalysisResult:
     clean["gross_margin_pct"] = clean["gross_profit"].div(clean["revenue"].where(clean["revenue"].ne(0))).mul(100)
     clean["month"] = clean["order_date"].dt.to_period("M").astype(str)
 
+    for column in ["revenue", "cost", "gross_profit"]:
+        finite = clean[column].map(lambda value: math.isfinite(float(value)))
+        if not finite.all():
+            bad_rows = clean.loc[~finite, "_source_row"].tolist()
+            raise ValueError(f"Calculated {column} overflowed on source row(s): {bad_rows}. Check unusually large values.")
+
     total_revenue = float(clean["revenue"].sum())
     total_cost = float(clean["cost"].sum())
     total_profit = total_revenue - total_cost
     order_count = int(clean["order_id"].nunique())
     summary = {
+        "total_rows": int(len(work)),
         "valid_rows": int(len(clean)),
         "rejected_rows": int(len(rejected)),
         "order_count": order_count,
@@ -135,17 +211,19 @@ def analyze_sales(frame: pd.DataFrame) -> AnalysisResult:
         "average_order_value": (total_revenue / order_count) if order_count else None,
     }
 
-    by_product = clean.groupby("product", dropna=False).agg(units=("quantity", "sum"), revenue=("revenue", "sum"), gross_profit=("gross_profit", "sum")).reset_index().sort_values("revenue", ascending=False)
-    by_category = clean.groupby("category", dropna=False).agg(units=("quantity", "sum"), revenue=("revenue", "sum"), gross_profit=("gross_profit", "sum")).reset_index().sort_values("revenue", ascending=False)
-    by_month = clean.groupby("month", dropna=False).agg(revenue=("revenue", "sum"), gross_profit=("gross_profit", "sum")).reset_index().sort_values("month")
+    by_product = clean.groupby("product", dropna=False).agg(units=("quantity", "sum"), revenue=("revenue", "sum"), cost=("cost", "sum"), gross_profit=("gross_profit", "sum")).reset_index().sort_values("revenue", ascending=False)
+    by_category = clean.groupby("category", dropna=False).agg(units=("quantity", "sum"), revenue=("revenue", "sum"), cost=("cost", "sum"), gross_profit=("gross_profit", "sum")).reset_index().sort_values("revenue", ascending=False)
+    by_month = clean.groupby("month", dropna=False).agg(orders=("order_id", "nunique"), revenue=("revenue", "sum"), gross_profit=("gross_profit", "sum")).reset_index().sort_values("month")
 
     return AnalysisResult(clean, rejected, summary, by_product, by_category, by_month, mapping)
 
 
 def build_html_report(result: AnalysisResult) -> str:
     s = result.summary
+
     def money(value):
         return "Not available" if value is None else f"{value:,.2f}"
+
     metrics = [
         ("Revenue", money(s["total_revenue"])), ("Cost", money(s["total_cost"])),
         ("Gross profit", money(s["gross_profit"])),
@@ -157,5 +235,5 @@ def build_html_report(result: AnalysisResult) -> str:
     categories = result.by_category.to_html(index=False, border=0, classes="data")
     months = result.by_month.to_html(index=False, border=0, classes="data")
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DataPilot AI report</title><style>
-    body{{font:15px system-ui,sans-serif;max-width:1050px;margin:40px auto;padding:0 20px;color:#202033;background:#faf9ff}}h1{{color:#4b2b83}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}}article{{background:white;border:1px solid #e8e2f2;border-radius:12px;padding:16px}}small{{display:block;color:#686477}}strong{{display:block;font-size:22px;margin-top:8px}}table{{border-collapse:collapse;width:100%;background:white;margin:12px 0 28px}}th,td{{padding:9px;border-bottom:1px solid #eee;text-align:left}}th{{background:#f0ebf8}}.note{{color:#666;font-size:13px}}
-    </style></head><body><h1>DataPilot AI — Sales report</h1><p>Based only on the valid rows in the uploaded dataset. No currency has been assumed.</p><section class="grid">{cards}</section><h2>Product performance</h2>{products}<h2>Category performance</h2>{categories}<h2>Monthly performance</h2>{months}<p class="note">Gross profit is revenue minus recorded unit cost. This is not certified accounting advice. Taxes, returns, shipping and payment fees are excluded unless present in the source data.</p></body></html>"""
+    body{{font:15px system-ui,sans-serif;max-width:1050px;margin:40px auto;padding:0 20px;color:#202033;background:#f5f2ff}}h1{{color:#5b35b5}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}}article{{background:white;border:1px solid #e8e2f2;border-radius:14px;padding:16px}}small{{display:block;color:#686477}}strong{{display:block;font-size:22px;margin-top:8px}}table{{border-collapse:collapse;width:100%;background:white;margin:12px 0 28px}}th,td{{padding:9px;border-bottom:1px solid #eee;text-align:left}}th{{background:#eee8ff}}.note{{color:#666;font-size:13px}}
+    </style></head><body><h1>DataPilot AI — Sales intelligence report</h1><p>Based only on {s["valid_rows"]} valid rows from {s["total_rows"]} source rows. No currency has been assumed.</p><section class="grid">{cards}</section><h2>Product performance</h2>{products}<h2>Category performance</h2>{categories}<h2>Monthly performance</h2>{months}<p class="note">Gross profit is revenue minus recorded unit cost. Taxes, returns, shipping and payment fees are excluded unless present in the source data. This is an analytics aid, not certified accounting software.</p></body></html>"""
