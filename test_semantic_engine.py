@@ -54,3 +54,14 @@ def test_semantic_inference_avoids_partial_word_coordinate_false_positives():
     result = {item["column"]: item for item in infer_semantic_fields(frame)}
     assert result["platform"]["semantic_type"] == "Text / category"
     assert result["latitude"]["semantic_type"] == "Latitude"
+
+
+
+def test_high_cardinality_text_requires_a_meaningful_sample_and_unique_count():
+    frame = pd.DataFrame({
+        "reference_text": [f"ref-{i:03d}" for i in range(30)],
+        "country": ["MA", "FR", "ES"] * 10,
+    })
+    result = {item["column"]: item for item in infer_semantic_fields(frame)}
+    assert result["reference_text"]["semantic_type"] == "High-cardinality text"
+    assert result["country"]["semantic_type"] == "Text / category"
