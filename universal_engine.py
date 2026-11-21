@@ -237,6 +237,15 @@ def time_summary(data: pd.DataFrame, date_col: str, measure: str, frequency: str
     freq = {"Day": "D", "Week": "W", "Month": "MS", "Quarter": "QS", "Year": "YS"}.get(frequency)
     if not freq:
         raise ValueError("Unsupported time frequency.")
-    work = data[[date_col, measure]].dropna().copy()
+    if aggregation not in {"sum", "mean", "median", "min", "max", "count"}:
+        raise ValueError("Unsupported time aggregation.")
+
+    work = data[[date_col, measure]].copy()
+    work[date_col] = pd.to_datetime(work[date_col], errors="coerce")
+    work[measure] = pd.to_numeric(work[measure], errors="coerce")
+    work = work.dropna(subset=[date_col, measure])
+    if work.empty:
+        return pd.DataFrame(columns=["period", "value"])
+
     work["_period"] = work[date_col].dt.to_period({"D":"D","W":"W","MS":"M","QS":"Q","YS":"Y"}[freq]).dt.start_time
     return work.groupby("_period")[measure].agg(aggregation).reset_index().rename(columns={"_period": "period", measure: "value"}).sort_values("period")
