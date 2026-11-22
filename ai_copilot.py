@@ -190,7 +190,7 @@ def _extract_response_text(payload: dict[str, Any]) -> str:
                     chunks.append(text)
     result = "\n".join(chunks).strip()
     if not result:
-        raise GroqError("Grok returned an empty response. Please try again.")
+        raise GroqError("DataPilot AI returned an empty response. Please try again.")
     return result
 
 
@@ -300,7 +300,7 @@ def ask_groq(
     conversation_history: list[Mapping[str, Any]] | None = None,
     opener=urlopen,
 ) -> str:
-    """Ask Grok using aggregate evidence only; API calls occur only on explicit user action."""
+    """Ask DataPilot AI using aggregate evidence; call the provider only on explicit user action."""
     key = api_key or get_api_key()
     if not key:
         raise GroqError("GROQ_API_KEY is not configured. Add it to Streamlit Cloud Secrets.")
