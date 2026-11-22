@@ -10,7 +10,7 @@ from ai_copilot import (
     ask_grok,
     build_ai_context,
     get_api_key,
-    test_connection,
+    test_connection as check_xai_connection,
 )
 
 
@@ -73,7 +73,7 @@ def test_ask_grok_posts_to_responses_api_and_extracts_text():
     answer = ask_grok("Explain revenue", {"numeric_measures": [{"field": "revenue", "mean": 20}]}, "test-key", opener=opener)
     assert answer == "Evidence summary."
     assert seen["url"].endswith("/responses")
-    assert seen["timeout"] == 45
+    assert seen["timeout"] == 120
     assert seen["headers"]["Authorization"] == "Bearer test-key"
     assert seen["body"]["store"] is False
     assert seen["body"]["model"] == "grok-4.7"
@@ -98,7 +98,7 @@ def test_test_connection_uses_models_endpoint_without_generation():
         seen["url"] = request.full_url
         return FakeResponse({"data": []})
 
-    test_connection("test-key", opener=opener)
+    check_xai_connection("test-key", opener=opener)
     assert seen["url"].endswith("/models")
 
 
@@ -106,4 +106,4 @@ def test_unauthorized_key_error_is_actionable():
     def opener(request, timeout):
         raise HTTPError(request.full_url, 401, "Unauthorized", {}, BytesIO(b""))
     with pytest.raises(XAIError, match="rejected the API key"):
-        test_connection("bad-key", opener=opener)
+        check_xai_connection("bad-key", opener=opener)
