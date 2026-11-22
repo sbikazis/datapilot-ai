@@ -6,11 +6,11 @@ import pandas as pd
 import pytest
 
 from ai_copilot import (
-    AIProviderError,
-    ask_model,
+    XAIError,
+    ask_grok,
     build_ai_context,
-    get_openrouter_api_key,
-    test_connection as check_openrouter_connection,
+    get_api_key,
+    test_connection as check_xai_connection,
 )
 
 
@@ -18,7 +18,7 @@ class FakeResponse:
     status = 200
 
     def __init__(self, payload=None):
-        self.payload = payload or {"output_text": "Evidence summary."}
+        self.payload = payload or {"output": [{"type": "message", "content": [{"type": "output_text", "text": "Evidence summary."}]}]}
 
     def __enter__(self):
         return self
@@ -31,15 +31,15 @@ class FakeResponse:
 
 
 def test_api_key_prefers_streamlit_secret_without_exposing_it():
-    assert get_openrouter_api_key({"OPENROUTER_API_KEY": " secret "}, {"OPENROUTER_API_KEY": "env"}) == "secret"
+    assert get_api_key({"XAI_API_KEY": " secret "}, {"XAI_API_KEY": "env"}) == "secret"
 
 
 def test_api_key_falls_back_to_environment():
-    assert get_openrouter_api_key({}, {"OPENROUTER_API_KEY": " env-key "}) == "env-key"
+    assert get_api_key({}, {"XAI_API_KEY": " env-key "}) == "env-key"
 
 
 def test_api_key_missing_returns_none():
-    assert get_openrouter_api_key({}, {}) is None
+    assert get_api_key({}, {}) is None
 
 
 def test_context_contains_aggregates_but_not_source_rows_or_sensitive_columns():
@@ -64,7 +64,7 @@ def test_context_contains_aggregates_but_not_source_rows_or_sensitive_columns():
     assert "source_row_count" in context
 
 
-def test_ask_model_posts_to_responses_api_and_extracts_text():
+def test_ask_grok_posts_to_responses_api_and_extracts_text():
     seen = {}
 
     def opener(request, timeout):
@@ -74,25 +74,25 @@ def test_ask_model_posts_to_responses_api_and_extracts_text():
         seen["body"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    answer = ask_model("Explain revenue", {"numeric_measures": [{"field": "revenue", "mean": 20}]}, "test-key", opener=opener)
+    answer = ask_grok("Explain revenue", {"numeric_measures": [{"field": "revenue", "mean": 20}]}, "test-key", opener=opener)
     assert answer == "Evidence summary."
     assert seen["url"].endswith("/responses")
     assert seen["timeout"] == 120
     assert seen["headers"]["Authorization"] == "Bearer test-key"
     assert seen["body"]["store"] is False
-    assert seen["body"]["model"] == "openai/gpt-oss-20b:free"
+    assert seen["body"]["model"] == "grok-4.7"
 
 
-def test_ask_model_rejects_empty_or_oversized_question_without_network():
-    with pytest.raises(AIProviderError, match="Enter a question"):
-        ask_model(" ", {}, "test-key")
-    with pytest.raises(AIProviderError, match="under 1000"):
-        ask_model("x" * 1001, {}, "test-key")
+def test_ask_grok_rejects_empty_or_oversized_question_without_network():
+    with pytest.raises(XAIError, match="Enter a question"):
+        ask_grok(" ", {}, "test-key")
+    with pytest.raises(XAIError, match="under 1000"):
+        ask_grok("x" * 1001, {}, "test-key")
 
 
-def test_ask_model_requires_key():
-    with pytest.raises(AIProviderError, match="not configured"):
-        ask_model("Question", {}, api_key="")
+def test_ask_grok_requires_key():
+    with pytest.raises(XAIError, match="not configured"):
+        ask_grok("Question", {}, api_key="")
 
 
 def test_test_connection_uses_models_endpoint_without_generation():
@@ -102,12 +102,12 @@ def test_test_connection_uses_models_endpoint_without_generation():
         seen["url"] = request.full_url
         return FakeResponse({"data": []})
 
-    check_openrouter_connection("test-key", opener=opener)
-    assert seen["url"].endswith("/key")
+    check_xai_connection("test-key", opener=opener)
+    assert seen["url"].endswith("/models")
 
 
 def test_unauthorized_key_error_is_actionable():
     def opener(request, timeout):
         raise HTTPError(request.full_url, 401, "Unauthorized", {}, BytesIO(b""))
-    with pytest.raises(AIProviderError, match="rejected the API key"):
-        check_openrouter_connection("bad-key", opener=opener)
+    with pytest.raises(XAIError, match="rejected the API key"):
+        check_xai_connection("bad-key", opener=opener)
