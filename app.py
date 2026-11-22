@@ -1238,6 +1238,17 @@ if dataset_name is not None:
             else:
                 st.info("No category or identifier fields are available.")
 
+        render_ai_explanation(
+            "studio", "analysis studio interpretation", ai_workspace_context,
+            metrics={
+                "rows_in_view": len(filtered),
+                "numeric_fields": len(numeric_cols),
+                "category_fields": len(category_cols),
+                "date_fields": len(date_cols),
+            },
+            evidence_kinds=[mode],
+        )
+
     # ── Data Explorer ──────────────────────────────────────────────────────────
     elif page == "Data Explorer":
         st.markdown("## Data Explorer")
