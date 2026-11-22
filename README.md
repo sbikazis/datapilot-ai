@@ -68,7 +68,8 @@ DataPilot can use the Groq Responses API (model `openai/gpt-oss-20b`) to explain
 
 - Configure `GROQ_API_KEY` in Streamlit Cloud **App settings → Secrets**; never commit the key or paste it into source code.
 - Workspace explainers require an explicit **Enable AI explanations** choice in the sidebar and a separate click on the relevant explanation action. No model request runs automatically on page load.
-- AI Copilot questions require the user to confirm the data-sharing disclosure and submit the question.
+- AI Copilot uses a chat-style interface with session-only conversation history and follow-up questions. The most recent 10 user/assistant messages are included with each new prompt; history resets when the active analysis context changes or the user starts a new conversation.
+- AI Copilot requires the user to confirm the data-sharing disclosure before submitting a message. No request is made merely by opening the page.
 - Requests use aggregate numeric summaries, row counts, field-role metadata and non-sensitive evidence types. Source rows, raw category values and fields with names suggesting direct personal identifiers are excluded.
 - Requests use `store: false`. This request-level setting is not a promise about every provider-side operational log or retention obligation; review Groq's current data terms before using confidential or regulated data.
 - API calls may incur usage charges under the key's current plan. A connection check calls the models endpoint and does not generate a response; each explanation or question consumes model usage.
