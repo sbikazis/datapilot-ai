@@ -25,7 +25,7 @@ from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
 from navigation_state import activate_sample_workspace
 from upload_intelligence import read_dataset_upload, upload_preview
-from ai_copilot import GroqError, ask_groq, build_ai_context, get_api_key, test_connection
+from ai_copilot import GroqError, ask_groq, build_ai_context, build_feature_ai_context, get_api_key, test_connection
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -52,6 +52,7 @@ defaults = {
     "role_overrides": {},
     "chart_type": "Recommended",
     "use_sample_dataset": False,
+    "ai_workspace_consent": False,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -329,6 +330,44 @@ def excel_export(frame, profile, filtered, report=None):
                 table.to_excel(writer, sheet_name=sheet_name[:31], index=False)
     return output.getvalue()
 
+def render_ai_explanation(section_key, section_label, base_context, metrics=None, evidence_kinds=None):
+    """Render an explicitly triggered, aggregate-only AI explanation in any workspace."""
+    if not st.session_state.get("ai_workspace_consent", False):
+        st.caption("Enable AI explanations in the sidebar to request an evidence-grounded interpretation.")
+        return
+    api_key = get_api_key(st.secrets)
+    if not api_key:
+        st.caption("AI explanations are unavailable until GROQ_API_KEY is configured.")
+        return
+
+    state_key = f"ai_explanation_{section_key}"
+    if st.button("Explain this with AI", key=f"request_{state_key}"):
+        with st.spinner("AI is interpreting the computed evidence…"):
+            try:
+                context = build_feature_ai_context(
+                    base_context, section_label, metrics=metrics, evidence_kinds=evidence_kinds,
+                )
+                answer = ask_groq(
+                    f"Explain the {section_label} for a business user. Clarify what the computed evidence says, "
+                    "what it may mean without claiming causation, and the most useful next validation step.",
+                    context,
+                    api_key=api_key,
+                )
+                st.session_state[state_key] = answer
+                st.session_state.pop(f"{state_key}_error", None)
+            except GroqError as exc:
+                st.session_state[f"{state_key}_error"] = str(exc)
+                st.session_state.pop(state_key, None)
+
+    if st.session_state.get(f"{state_key}_error"):
+        st.error(st.session_state[f"{state_key}_error"])
+    if st.session_state.get(state_key):
+        with st.container(border=True):
+            st.markdown("**AI interpretation**")
+            st.markdown(st.session_state[state_key])
+            st.caption("AI-generated explanation based on aggregate evidence. Validate claims against the source data; this is not a forecast or causal conclusion.")
+
+
 # ── Sidebar shell ───────────────────────────────────────────────────────────
 with st.sidebar:
     brand_icon, brand_text = st.columns([1, 3])
@@ -355,6 +394,10 @@ with st.sidebar:
     st.markdown("**WORKSPACE**")
     st.caption(st.session_state.workspace_name)
     st.caption("Session workspace · preferences are not synced to an account")
+    st.markdown("---")
+    st.markdown("**AI ASSISTANCE**")
+    st.checkbox("Enable AI explanations", key="ai_workspace_consent")
+    st.caption("AI requests run only when you press an explanation button. Aggregate metrics and metadata only; no source rows or raw category values.")
 
 # ── Workspace entry / active dataset shell ───────────────────────────────────
 # Keep a single uploader widget so Streamlit retains the selected file across reruns.
@@ -666,6 +709,10 @@ if dataset_name is not None:
     next_questions = build_next_questions(
         domain_assessment["domain"], numeric_cols, category_cols, date_cols, limit=4
     )
+    ai_workspace_context = build_ai_context(
+        data, filtered, numeric_cols, category_cols, date_cols,
+        domain_assessment["domain"], profile.insights, next_questions,
+    )
 
     # Dataset context: compact metadata without repeating the filename in the top bar.
     st.markdown(
@@ -778,6 +825,15 @@ if dataset_name is not None:
             else:
                 st.caption("No specialist domain had enough independent field-name evidence.")
 
+            render_ai_explanation(
+                "overview", "overview intelligence brief", ai_workspace_context,
+                metrics={
+                    "source_rows": source_rows, "filtered_rows": active_rows,
+                    "completeness_pct": completeness, "missing_cells": missing_cells,
+                    "duplicate_rows": duplicate_rows, "priority_signal_count": signal_count,
+                },
+                evidence_kinds=[item.get("kind", "observation") for item in profile.insights[:8]],
+            )
             st.markdown("### Questions worth exploring")
             if next_questions:
                 for question in next_questions[:3]:
@@ -881,6 +937,11 @@ if dataset_name is not None:
                     with st.expander(f"Inspect supporting source records · {len(source_rows):,} rows"):
                         st.dataframe(source_rows.head(500), use_container_width=True, hide_index=True)
                         st.download_button("Download supporting records", source_rows.to_csv(index=False).encode("utf-8-sig"), "datapilot_guided_source_rows.csv", "text/csv", key="download_guided_source_rows")
+            render_ai_explanation(
+                f"guided_{selected_objective}", "guided analysis result", ai_workspace_context,
+                metrics=result.get("summary", {}),
+                evidence_kinds=[selected_objective, result.get("status", "ready")],
+            )
             st.caption("Guided results are descriptive and traceable to the current filtered rows. They do not establish causality or predict future outcomes.")
         else:
             st.info("Choose an objective and its fields, then run the analysis. Only supported objectives are shown for this dataset.")
@@ -929,6 +990,15 @@ if dataset_name is not None:
             st.write(selected_action["next_step"])
             st.markdown("**Decision guardrail**")
             st.caption(selected_action["decision_guardrail"])
+            render_ai_explanation(
+                "decision", "selected decision action", ai_workspace_context,
+                metrics={
+                    "priority_score": selected_action.get("priority_score"),
+                    "sample_support": selected_action.get("sample"),
+                    "rows_in_current_view": selected_action.get("view_rows"),
+                },
+                evidence_kinds=[selected_action.get("finding_kind", "observation"), selected_action.get("action_type", "validation")],
+            )
             source_index = selected_action["source_index"]
             original_finding = profile.insights[source_index] if source_index < len(profile.insights) else {}
             with st.expander("Inspect original finding and full priority rationale"):
@@ -1287,6 +1357,19 @@ if dataset_name is not None:
         st.markdown("#### Priority findings")
         for item in report_data["findings"][:5]:
             st.markdown(f'<div class="insight"><div class="kind">{item.get("evidence_level", item.get("kind", "Observation"))} · {item.get("priority_score", "—")}/100</div><strong>{item.get("title", "Observation")}</strong><p>{item.get("detail", "")}</p><div class="next">NEXT STEP → {item.get("next_step", item.get("action", ""))}</div></div>', unsafe_allow_html=True)
+        render_ai_explanation(
+            "report", "executive report summary", ai_workspace_context,
+            metrics={
+                "source_rows": report_data.get("source_rows"),
+                "filtered_rows": report_data.get("filtered_rows"),
+                "field_count": report_data.get("field_count"),
+                "missing_cells": report_data.get("quality", {}).get("missing_cells"),
+                "duplicate_rows": report_data.get("quality", {}).get("duplicate_rows"),
+                "finding_count": len(report_data.get("findings", [])),
+                "follow_up_question_count": len(report_data.get("next_questions", [])),
+            },
+            evidence_kinds=[item.get("kind", "observation") for item in report_data.get("findings", [])[:8]],
+        )
         st.markdown("#### Workbook contents")
         st.caption("Analyzed data · Filtered data · Executive summary · Key measures · Priority findings · Data quality · Field dictionary · Next questions · Applied filters")
         st.info("HTML is print-friendly and can be saved as PDF from your browser. A native PDF export, scheduled delivery and saved report history are not included yet.")
