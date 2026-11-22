@@ -62,13 +62,13 @@ The next release priorities are deployment verification, accessibility review, b
 DataPilot reports the detected file format, text encoding and delimiter (or selected Excel worksheet), row/column counts, exact duplicate rows, empty columns, and structural warnings. A read-only source preview is available before deeper analysis. Nested JSON normalization is disclosed. Delimited files with inconsistent row widths are rejected with an actionable error rather than silently dropping malformed records. Intake diagnostics do not automatically repair or rewrite uploaded values; uploads remain session-local.
 
 
-## Optional Grok AI Copilot
+## Optional Groq AI Copilot
 
-The optional AI Copilot uses the xAI Responses API (model `grok-4.7`) to explain DataPilot's existing evidence and answer questions about the current analysis. It does not replace or recalculate the deterministic analysis engine.
+The optional AI Copilot uses the Groq Responses API (model `openai/gpt-oss-20b`) to explain DataPilot's existing evidence and answer questions about the current analysis. It does not replace or recalculate the deterministic analysis engine.
 
-- Configure `XAI_API_KEY` in Streamlit Cloud **App settings → Secrets**; never commit the key or paste it into source code.
+- Configure `GROQ_API_KEY` in Streamlit Cloud **App settings → Secrets**; never commit the key or paste it into source code.
 - The Copilot is opt-in. A user must explicitly confirm the disclosure and submit a question before an AI request is made.
 - Only aggregate numeric summaries, field-role metadata, row counts and finding metadata are sent. Source rows, raw category values and fields with names suggesting direct personal identifiers are excluded.
-- Requests use `store: false`. This request-level setting is not a promise about every provider-side operational log or retention obligation; review xAI's current data terms before using confidential or regulated data.
+- Requests use `store: false`. This request-level setting is not a promise about every provider-side operational log or retention obligation; review Groq's current data terms before using confidential or regulated data.
 - API calls may incur usage charges. A connection check calls the models endpoint and does not generate a response; asking a question consumes model usage.
-- If the key is missing or xAI is unavailable, local profiling, charts, findings and reports continue to work.
+- If the key is missing or Groq is unavailable, local profiling, charts, findings and reports continue to work.
