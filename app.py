@@ -25,7 +25,7 @@ from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
 from navigation_state import activate_sample_workspace
 from upload_intelligence import read_dataset_upload, upload_preview
-from ai_copilot import XAIError, ask_grok, build_ai_context, get_api_key, test_connection
+from ai_copilot import GroqError, ask_groq, build_ai_context, get_api_key, test_connection
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -1303,18 +1303,18 @@ if dataset_name is not None:
         )
         copilot_key = get_api_key(st.secrets)
         if copilot_key:
-            st.success("XAI_API_KEY is configured in this app's runtime.")
+            st.success("GROQ_API_KEY is configured in this app's runtime.")
         else:
-            st.warning("XAI_API_KEY was not found in the app runtime. Add it in Streamlit Cloud → App settings → Secrets, then reload the app.")
+            st.warning("GROQ_API_KEY was not found in the app runtime. Add it in Streamlit Cloud → App settings → Secrets, then reload the app.")
         connection_col, connection_note = st.columns([1, 2])
         with connection_col:
-            if st.button("Test xAI connection", key="test_xai_connection", disabled=not bool(copilot_key)):
+            if st.button("Test Groq connection", key="test_Groq_connection", disabled=not bool(copilot_key)):
                 try:
                     test_connection(copilot_key)
-                    st.session_state["xai_connection_ok"] = True
-                    st.success("Connection successful. The key can access the xAI API.")
-                except XAIError as exc:
-                    st.session_state["xai_connection_ok"] = False
+                    st.session_state["Groq_connection_ok"] = True
+                    st.success("Connection successful. The key can access the Groq API.")
+                except GroqError as exc:
+                    st.session_state["Groq_connection_ok"] = False
                     st.error(str(exc))
         with connection_note:
             st.caption("Checks API-key access through the models endpoint. It does not generate an answer or consume model output tokens.")
@@ -1328,7 +1328,7 @@ if dataset_name is not None:
                 height=110,
             )
             ai_consent = st.checkbox(
-                "I agree to send the disclosed aggregate analysis summary and my question to xAI for this request.",
+                "I agree to send the disclosed aggregate analysis summary and my question to Groq for this request.",
                 key="ai_copilot_consent",
             )
             ai_submit = st.form_submit_button("Ask Grok", type="primary", disabled=not bool(copilot_key))
@@ -1344,12 +1344,12 @@ if dataset_name is not None:
                             data, filtered, numeric_cols, category_cols, date_cols,
                             domain_assessment["domain"], profile.insights, next_questions,
                         )
-                        st.session_state["ai_copilot_answer"] = ask_grok(
+                        st.session_state["ai_copilot_answer"] = ask_groq(
                             ai_question, ai_context, api_key=copilot_key,
                         )
                         st.session_state["ai_copilot_question"] = ai_question.strip()
                         st.session_state["ai_copilot_error"] = None
-                    except XAIError as exc:
+                    except GroqError as exc:
                         st.session_state["ai_copilot_error"] = str(exc)
                         st.session_state.pop("ai_copilot_answer", None)
         if st.session_state.get("ai_copilot_error"):
@@ -1360,7 +1360,7 @@ if dataset_name is not None:
             st.caption(f"Question: {st.session_state.get('ai_copilot_question', '')}")
             st.markdown(st.session_state["ai_copilot_answer"])
             st.caption("AI-generated interpretation. Verify every claim against the source data; it does not establish causality or predict outcomes.")
-        st.info("Usage is not free by default. Each submitted question may incur xAI API charges under your key's current plan. Monitor usage in the xAI console.")
+        st.info("Usage is not free by default. Each submitted question may incur Groq API charges under your key's current plan. Monitor usage in the Groq console.")
 
     elif page == "Settings":
         st.markdown("## Workspace settings")
