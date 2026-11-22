@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_MODEL = "openai/gpt-oss-20b"
+USER_AGENT = "DataPilotAI/1.0 (+https://github.com/sbikazis/datapilot-ai)"
 MAX_QUESTION_CHARS = 1_000
 MAX_CONTEXT_CHARS = 12_000
 SENSITIVE_FIELD = re.compile(
@@ -152,10 +153,14 @@ def _extract_response_text(payload: dict[str, Any]) -> str:
 def _safe_http_error(exc: HTTPError) -> GroqError:
     """Translate Groq errors while preserving a short, safe provider diagnostic."""
     detail = ""
+    cloudflare_code = None
+    cloudflare_name = ""
     try:
         raw = exc.read(4_096).decode("utf-8", errors="replace")
         payload = json.loads(raw) if raw else {}
         if isinstance(payload, dict):
+            cloudflare_code = payload.get("error_code")
+            cloudflare_name = str(payload.get("error_name", "")).lower()
             error = payload.get("error", payload)
             if isinstance(error, dict):
                 detail = error.get("message") or error.get("detail") or ""
@@ -173,8 +178,19 @@ def _safe_http_error(exc: HTTPError) -> GroqError:
     suffix = f" Groq says: {detail}" if detail else ""
     if exc.code == 401:
         return GroqError("Groq rejected the API key. Check that GROQ_API_KEY is correct and active in Streamlit Secrets." + suffix)
+    if exc.code == 403 and (
+        cloudflare_code == 1010
+        or cloudflare_name == "browser_signature_banned"
+        or "blocked access based on your browser" in detail.lower()
+    ):
+        return GroqError(
+            "Groq's edge security blocked DataPilot's server request (Cloudflare 1010: browser signature). "
+            "This is not evidence that your API key is invalid. DataPilot now identifies its API requests with "
+            "a stable application User-Agent. If the block continues, Groq support must review/allow the request."
+            + suffix
+        )
     if exc.code == 403:
-        return GroqError("This API key does not have permission to use the requested Groq API." + suffix)
+        return GroqError("Groq denied this API request (HTTP 403). Check the key's API access permissions." + suffix)
     if exc.code == 429:
         return GroqError("The Groq API rate or usage limit was reached. Check your Groq console usage and billing." + suffix)
     if exc.code >= 500:
@@ -189,7 +205,11 @@ def test_connection(api_key: str | None = None, *, opener=urlopen) -> None:
         raise GroqError("GROQ_API_KEY is not configured. Add it to Streamlit Cloud Secrets.")
     request = Request(
         f"{GROQ_BASE_URL}/models",
-        headers={"Authorization": f"Bearer {key}", "Accept": "application/json"},
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Accept": "application/json",
+            "User-Agent": USER_AGENT,
+        },
         method="GET",
     )
     try:
@@ -253,6 +273,7 @@ def ask_groq(
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": USER_AGENT,
         },
         method="POST",
     )
