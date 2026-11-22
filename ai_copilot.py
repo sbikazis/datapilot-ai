@@ -134,6 +134,48 @@ def build_ai_context(
     }
 
 
+def build_feature_ai_context(
+    base_context: Mapping[str, Any],
+    feature: str,
+    *,
+    metrics: Mapping[str, Any] | None = None,
+    evidence_kinds: list[str] | tuple[str, ...] | None = None,
+) -> dict[str, Any]:
+    """Add safe, section-specific numeric context without exposing row or category values."""
+    safe_metrics: dict[str, int | float] = {}
+    for name, value in list((metrics or {}).items())[:30]:
+        label = str(name).strip()[:80]
+        if not label or SENSITIVE_FIELD.search(label) or isinstance(value, bool):
+            continue
+        if not isinstance(value, (int, float)):
+            continue
+        try:
+            number = float(value)
+            if not __import__("math").isfinite(number):
+                continue
+            safe_metrics[label] = round(number, 4)
+        except (TypeError, ValueError, OverflowError):
+            continue
+
+    safe_kinds = []
+    for kind in list(evidence_kinds or [])[:12]:
+        label = str(kind).strip()[:60]
+        if label and not SENSITIVE_FIELD.search(label):
+            safe_kinds.append(label)
+
+    return {
+        "base_analysis": dict(base_context),
+        "active_workspace_section": str(feature)[:80],
+        "section_metrics": safe_metrics,
+        "evidence_types": safe_kinds,
+        "section_guardrails": [
+            "Section metrics are calculated by DataPilot; do not recalculate or alter them.",
+            "Do not infer category labels, personal details, causes, targets, currency or forecasts.",
+            "Explain observations in plain language and recommend validation, not automatic action.",
+        ],
+    }
+
+
 def _extract_response_text(payload: dict[str, Any]) -> str:
     chunks: list[str] = []
     for item in payload.get("output", []):
