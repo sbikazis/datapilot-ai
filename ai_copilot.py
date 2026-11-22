@@ -14,7 +14,7 @@ MAX_QUESTION_CHARS = 1_000
 MAX_CONTEXT_CHARS = 12_000
 SENSITIVE_FIELD = re.compile(
     r"(email|e-mail|phone|mobile|telephone|address|street|postcode|postal|"
-    r"first.?name|last.?name|full.?name|customer.?name|person.?name|"
+    r"first.?name|last.?name|full.?name|customer.?name|person.?name|(^|[_\\s-])name($|[_\\s-])|"
     r"ssn|social.?security|passport|national.?id|account.?number|"
     r"credit.?card|iban|password|token|secret)",
     re.IGNORECASE,
@@ -162,7 +162,7 @@ def _safe_http_error(exc: HTTPError) -> XAIError:
 
 def test_connection(api_key: str | None = None, *, opener=urlopen) -> None:
     """Validate key access using the models endpoint; this does not generate a model response."""
-    key = api_key or get_api_key()
+    key = get_api_key() if api_key is None else str(api_key).strip()
     if not key:
         raise XAIError("XAI_API_KEY is not configured. Add it to Streamlit Cloud Secrets.")
     request = Request(
@@ -235,7 +235,7 @@ def ask_grok(
         method="POST",
     )
     try:
-        with opener(request, timeout=45) as response:
+        with opener(request, timeout=120) as response:
             payload = json.loads(response.read().decode("utf-8"))
         return _extract_response_text(payload)
     except HTTPError as exc:
