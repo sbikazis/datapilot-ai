@@ -1,4 +1,10 @@
-from visual_identity import THEMES, THEME_OPTIONS, build_theme_css, resolve_theme, theme_chart_colors
+from visual_identity import (
+    THEMES,
+    build_theme_css,
+    resolve_theme,
+    theme_chart_colors,
+    theme_chart_scale,
+)
 
 
 def test_automatic_theme_tracks_detected_domain():
@@ -20,19 +26,34 @@ def test_all_themes_have_light_and_dark_contrast_tokens():
                 assert palette[key].startswith("#")
 
 
-def test_chart_palette_is_multi_series_and_stable():
+def test_chart_palettes_are_distinct_and_appearance_aware():
     for theme in THEMES.values():
-        colors = theme_chart_colors(theme)
-        assert len(colors) >= 6
-        assert len(set(colors)) == len(colors)
+        light = theme_chart_colors(theme, "Light")
+        dark = theme_chart_colors(theme, "Dark")
+        assert len(light) >= 6
+        assert len(set(light)) == len(light)
+        assert len(dark) >= 6
+        assert len(set(dark)) == len(dark)
+        assert light != dark
 
 
-def test_theme_css_contains_responsive_and_accessibility_rules():
+def test_continuous_chart_scale_uses_the_active_appearance():
+    theme = THEMES["Nebula / sci-fi"]
+    assert theme_chart_scale(theme, "Light")[0] == theme["light"]["surface_2"]
+    assert theme_chart_scale(theme, "Dark")[0] == theme["dark"]["surface_2"]
+    assert theme_chart_scale(theme, "Dark")[-1] == theme["dark"]["accent"]
+
+
+def test_theme_css_contains_responsive_interaction_and_accessibility_rules():
     css = build_theme_css(THEMES["Nebula / sci-fi"], "Dark", "Compact")
     assert "--canvas:#0d1020" in css
-    assert "@media(max-width:640px)" in css
+    assert "@media(max-width:768px)" in css
+    assert "@media(max-width:480px)" in css
     assert "prefers-reduced-motion" in css
     assert ":focus-visible" in css
+    assert ":disabled" in css
+    assert "stChatMessage" in css
+    assert "stPlotlyChart" in css
     assert "__CANVAS__" not in css
     assert "color-scheme:dark" in css
 
