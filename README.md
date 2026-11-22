@@ -62,14 +62,13 @@ The next release priorities are deployment verification, accessibility review, b
 DataPilot reports the detected file format, text encoding and delimiter (or selected Excel worksheet), row/column counts, exact duplicate rows, empty columns, and structural warnings. A read-only source preview is available before deeper analysis. Nested JSON normalization is disclosed. Delimited files with inconsistent row widths are rejected with an actionable error rather than silently dropping malformed records. Intake diagnostics do not automatically repair or rewrite uploaded values; uploads remain session-local.
 
 
+## Optional Grok AI Copilot
 
-## Optional AI Copilot — OpenRouter free model
+The optional AI Copilot uses the xAI Responses API (model `grok-4.7`) to explain DataPilot's existing evidence and answer questions about the current analysis. It does not replace or recalculate the deterministic analysis engine.
 
-The AI Copilot uses OpenRouter with OpenAI's open-weight `gpt-oss-20b` model on the free route. The configured model ID is **`openai/gpt-oss-20b:free`**. The `:free` suffix is essential: the unsuffixed `openai/gpt-oss-20b` route is not the free variant.
-
-- Create an API key at https://openrouter.ai/keys and add `OPENROUTER_API_KEY = "your_key"` to Streamlit Cloud **App settings → Secrets**. The previous `XAI_API_KEY` is not used by this integration.
+- Configure `XAI_API_KEY` in Streamlit Cloud **App settings → Secrets**; never commit the key or paste it into source code.
 - The Copilot is opt-in. A user must explicitly confirm the disclosure and submit a question before an AI request is made.
-- Only aggregate numeric summaries, field-role metadata, row counts and finding metadata are sent. Source rows, raw category values and fields with names suggesting personal identifiers or sensitive attributes are excluded.
-- OpenRouter's free model variants are not billed per token but are rate-limited; limits can change. The app does not silently fall back to a paid model.
-- The connection check validates the OpenRouter key using its account endpoint and does not generate a model response.
-- If the key is missing or the free model is rate-limited/unavailable, local profiling, charts, findings and reports continue to work.
+- Only aggregate numeric summaries, field-role metadata, row counts and finding metadata are sent. Source rows, raw category values and fields with names suggesting direct personal identifiers are excluded.
+- Requests use `store: false`. This request-level setting is not a promise about every provider-side operational log or retention obligation; review xAI's current data terms before using confidential or regulated data.
+- API calls may incur usage charges. A connection check calls the models endpoint and does not generate a response; asking a question consumes model usage.
+- If the key is missing or xAI is unavailable, local profiling, charts, findings and reports continue to work.
