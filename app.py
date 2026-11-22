@@ -23,7 +23,7 @@ from visualizations import build_time_figure
 from studio_logic import recommend_visualization, numeric_summary, safe_correlation, category_summary, build_evidence_findings, selected_point_values, selected_point_indices
 from semantic_engine import infer_semantic_fields
 from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
-from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
+from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_chart_scale, theme_gallery_html
 from navigation_state import activate_sample_workspace
 from upload_intelligence import read_dataset_upload, upload_preview
 from ai_copilot import GroqError, ask_groq, build_ai_context, build_feature_ai_context, get_api_key, test_connection
@@ -680,14 +680,9 @@ if dataset_name is not None:
     plot_text = active_visual_theme["dark" if st.session_state.theme_mode == "Dark" else "light"]["text"]
     plot_grid = active_visual_theme["dark" if st.session_state.theme_mode == "Dark" else "light"]["line"]
     px.defaults.color_discrete_sequence = chart_colors
-    px.defaults.color_continuous_scale = [
-        active_visual_theme["light"]["accent_soft"],
-        active_visual_theme["light"]["accent_2"],
-        active_visual_theme["light"]["accent"],
-        active_visual_theme["light"]["sidebar"],
-    ]
+    px.defaults.color_continuous_scale = theme_chart_scale(active_visual_theme, st.session_state.theme_mode)
     px.defaults.template = go.layout.Template(layout=go.Layout(
-        font=dict(family="Inter, Segoe UI, sans-serif", color=plot_text),
+        font=dict(family="Inter, Segoe UI, system-ui, sans-serif", color=plot_text),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
         yaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
