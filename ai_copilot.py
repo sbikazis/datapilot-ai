@@ -165,8 +165,8 @@ def _safe_http_error(exc: HTTPError) -> XAIError:
             detail = ""
         detail = " ".join(detail.split())[:240]
         # Never surface credential-shaped strings returned by an upstream error.
-        detail = re.sub(r"(?i)(bearer\\s+)[^\\s,;]+", r"\\1[redacted]", detail)
-        detail = re.sub(r"(?i)(xai[-_ ]?api[-_ ]?key\\s*[:=]\\s*)[^\\s,;]+", r"\\1[redacted]", detail)
+        detail = re.sub(r"(?i)(bearer\s+)[^\s,;]+", r"\1[redacted]", detail)
+        detail = re.sub(r"(?i)(xai[-_ ]?api[-_ ]?key\s*[:=]\s*)[^\s,;]+", r"\1[redacted]", detail)
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
         detail = ""
 
