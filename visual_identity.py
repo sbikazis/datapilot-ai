@@ -147,6 +147,28 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
 @keyframes dp-rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:900px){.main .block-container{padding-left:1rem;padding-right:1rem}.hero{padding:22px!important}.workspace-topbar{flex-wrap:wrap;align-items:flex-start}.dataset-summary{gap:6px}.dataset-summary .dataset-recommendation{flex-basis:100%}}
 @media(max-width:640px){.main .block-container{padding-top:.8rem;padding-bottom:2rem}.main h1{font-size:1.55rem!important}.main h2{font-size:1.2rem!important}[data-testid="stMetric"]{min-height:78px;padding:11px!important}[data-testid="stHorizontalBlock"]{gap:.55rem!important}.hero{border-radius:16px!important}.hero-meta{font-size:.58rem}.stButton>button,.stDownloadButton>button{width:100%}}
+
+.copilot-hero{position:relative;overflow:hidden;padding:clamp(24px,3.4vw,42px);margin:2px 0 24px;border-radius:24px;border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line));background:radial-gradient(circle at 86% 10%,var(--glow),transparent 30%),linear-gradient(118deg,var(--hero-1),var(--hero-2));box-shadow:0 20px 55px color-mix(in srgb,var(--hero-1) 25%,transparent)}
+.copilot-hero:after{content:"";position:absolute;width:260px;height:260px;right:-100px;bottom:-190px;border:1px solid color-mix(in srgb,#fff 24%,transparent);border-radius:50%;box-shadow:0 0 0 25px color-mix(in srgb,#fff 5%),0 0 0 52px color-mix(in srgb,#fff 3%);pointer-events:none}
+.copilot-eyebrow{font-size:.68rem;letter-spacing:.17em;font-weight:850;color:var(--accent-2);margin-bottom:12px}
+.copilot-hero h1{font-size:clamp(1.9rem,3.5vw,2.8rem)!important;line-height:1.06!important;color:#fff!important;margin:0 0 10px!important;letter-spacing:-.05em}
+.copilot-hero p{max-width:700px;color:#e4e8f7!important;font-size:1rem;line-height:1.65;margin:0}
+.copilot-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.copilot-meta span{font-size:.72rem;font-weight:700;color:#f4f2ff;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);border-radius:999px;padding:6px 10px}
+.copilot-sidepanel{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:14px;margin:8px 0 18px;box-shadow:0 8px 24px color-mix(in srgb,var(--text) 4%,transparent)}
+.copilot-side-label{font-size:.64rem;letter-spacing:.13em;font-weight:850;color:var(--muted);margin-bottom:8px}
+.copilot-sidepanel strong{display:block;color:var(--text);font-size:.92rem}
+.copilot-sidepanel p{font-size:.76rem;line-height:1.5;color:var(--muted)!important;margin:6px 0 0}
+.copilot-welcome{min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:34px 22px;border:1px dashed var(--line);border-radius:18px;background:linear-gradient(145deg,var(--surface),var(--surface-2))}
+.copilot-welcome-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:white;font-size:1.55rem;box-shadow:0 10px 28px var(--glow);margin-bottom:15px}
+.copilot-welcome h3{font-size:1.25rem!important;margin:0 0 8px!important}
+.copilot-welcome p{max-width:440px;color:var(--muted)!important;line-height:1.6}
+.copilot-welcome-note{font-size:.76rem;color:var(--accent);font-weight:700;margin-top:10px}
+[data-testid="stChatMessage"]{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:10px 0;background:var(--surface);box-shadow:0 6px 20px color-mix(in srgb,var(--text) 3%,transparent)}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p{line-height:1.65}
+[data-testid="stChatInput"]{border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 8px 28px color-mix(in srgb,var(--text) 6%,transparent)}
+[data-testid="stChatInput"] textarea{color:var(--text)!important}
+@media(max-width:900px){.copilot-hero{border-radius:18px;padding:24px}.copilot-meta{gap:6px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 """.replace("__SCHEME__", "dark" if mode == "Dark" else "light")
