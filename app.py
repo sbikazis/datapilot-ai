@@ -54,6 +54,10 @@ defaults = {
     "chart_type": "Recommended",
     "use_sample_dataset": False,
     "ai_workspace_consent": False,
+    "ai_copilot_messages": [],
+    "ai_copilot_context_fingerprint": None,
+    "ai_copilot_consent": False,
+    "ai_copilot_pending_prompt": "",
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -1405,74 +1409,139 @@ if dataset_name is not None:
 
     # ── Settings ────────────────────────────────────────────────────────────────
     elif page == "AI Copilot":
-        st.markdown("## AI Copilot")
-        st.caption("Ask Grok to explain the evidence already calculated by DataPilot. Your local analysis engine remains the source of truth.")
+        copilot_key = get_api_key(st.secrets)
+        ai_context = build_ai_context(
+            data, filtered, numeric_cols, category_cols, date_cols,
+            domain_assessment["domain"], profile.insights, next_questions,
+        )
+        context_fingerprint = hashlib.sha256(
+            json.dumps(ai_context, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+        ).hexdigest()
+        previous_fingerprint = st.session_state.get("ai_copilot_context_fingerprint")
+        context_changed = bool(previous_fingerprint and previous_fingerprint != context_fingerprint)
+        if context_changed:
+            st.session_state["ai_copilot_messages"] = []
+            st.session_state["ai_copilot_pending_prompt"] = ""
+        st.session_state["ai_copilot_context_fingerprint"] = context_fingerprint
+
         st.markdown(
-            '<div class="card"><div class="card-label">OPTIONAL EXTERNAL AI</div>'
-            '<div class="card-title">Evidence first. AI explanation second.</div>'
-            '<div class="card-copy">Grok receives aggregate summaries and selected analysis metadata only after you consent and submit a question. Source rows and raw category values are not sent. Avoid confidential or regulated data.</div></div>',
+            '<section class="copilot-hero">'
+            '<div class="copilot-eyebrow">DATAPILOT INTELLIGENCE · CONVERSATIONAL ANALYST</div>'
+            '<h1>Think with your data.</h1>'
+            '<p>Ask questions, explore evidence and build on previous answers. Your analysis engine remains the source of truth.</p>'
+            '<div class="copilot-meta"><span>◈ Evidence-grounded</span><span>✦ Follow-up aware</span><span>⌁ Private to this session</span></div>'
+            '</section>',
             unsafe_allow_html=True,
         )
-        copilot_key = get_api_key(st.secrets)
-        if copilot_key:
-            st.success("GROQ_API_KEY is configured in this app's runtime.")
-        else:
-            st.warning("GROQ_API_KEY was not found in the app runtime. Add it in Streamlit Cloud → App settings → Secrets, then reload the app.")
-        connection_col, connection_note = st.columns([1, 2])
-        with connection_col:
-            if st.button("Test Groq connection", key="test_Groq_connection", disabled=not bool(copilot_key)):
-                try:
-                    test_connection(copilot_key)
-                    st.session_state["Groq_connection_ok"] = True
-                    st.success("Connection successful. The key can access the Groq API.")
-                except GroqError as exc:
-                    st.session_state["Groq_connection_ok"] = False
-                    st.error(str(exc))
-        with connection_note:
-            st.caption("Checks API-key access through the models endpoint. It does not generate an answer or consume model output tokens.")
-        st.markdown("### Ask your data")
-        st.caption("The question is sent only when you check the consent box and press Ask Grok.")
-        with st.form("ai_copilot_question_form"):
-            ai_question = st.text_area(
-                "What would you like to understand?",
-                placeholder="Example: Which patterns deserve investigation, and what evidence supports them?",
-                max_chars=1000,
-                height=110,
+        if context_changed:
+            st.info("The active dataset or its filters changed. A fresh conversation has been started so previous answers are not mixed with the new analysis.")
+        elif not st.session_state.get("ai_copilot_messages"):
+            st.caption("A focused workspace for understanding the dataset, one question at a time.")
+
+        control_col, chat_col = st.columns([0.78, 2.15], gap="large")
+        with control_col:
+            st.markdown("#### Conversation")
+            if st.button("＋  New conversation", key="ai_copilot_new_chat", use_container_width=True):
+                st.session_state["ai_copilot_messages"] = []
+                st.session_state["ai_copilot_pending_prompt"] = ""
+                st.rerun()
+            st.markdown(
+                '<div class="copilot-sidepanel"><div class="copilot-side-label">CURRENT ANALYSIS</div>'
+                f'<strong>{escape(str(domain_assessment["domain"]))}</strong>'
+                f'<p>{len(filtered):,} filtered rows · {len(data.columns):,} fields</p>'
+                f'<p>{len(numeric_cols):,} numeric · {len(category_cols):,} categorical · {len(date_cols):,} date fields</p>'
+                '</div>',
+                unsafe_allow_html=True,
             )
-            ai_consent = st.checkbox(
-                "I agree to send the disclosed aggregate analysis summary and my question to Groq for this request.",
-                key="ai_copilot_consent",
-            )
-            ai_submit = st.form_submit_button("Ask Grok", type="primary", disabled=not bool(copilot_key))
-        if ai_submit:
-            if not ai_consent:
-                st.error("Please confirm the data-sharing disclosure before sending a request.")
-            elif not ai_question.strip():
-                st.error("Enter a question first.")
-            else:
-                with st.spinner("Grok is reviewing the evidence summary…"):
+            st.markdown("#### Suggested prompts")
+            prompt_options = [
+                ("✦  Executive summary", "Summarize the most important evidence in this dataset and explain what deserves attention first."),
+                ("◎  Find opportunities", "Which patterns or opportunities should I investigate next? Explain the evidence and its limitations."),
+                ("⌁  Data quality review", "What data quality risks are visible in this analysis, and how could they affect decisions?"),
+            ]
+            for prompt_index, (label, prompt_text) in enumerate(prompt_options):
+                if st.button(label, key=f"ai_copilot_suggestion_{prompt_index}", use_container_width=True, disabled=not bool(copilot_key and st.session_state.get("ai_copilot_consent", False))):
+                    st.session_state["ai_copilot_pending_prompt"] = prompt_text
+                    st.rerun()
+
+            with st.expander("Connection & privacy", expanded=False):
+                if copilot_key:
+                    st.success("Groq API key detected")
+                else:
+                    st.warning("GROQ_API_KEY is not configured")
+                if st.button("Test provider connection", key="test_Groq_connection", disabled=not bool(copilot_key), use_container_width=True):
                     try:
-                        ai_context = build_ai_context(
-                            data, filtered, numeric_cols, category_cols, date_cols,
-                            domain_assessment["domain"], profile.insights, next_questions,
-                        )
-                        st.session_state["ai_copilot_answer"] = ask_groq(
-                            ai_question, ai_context, api_key=copilot_key,
-                        )
-                        st.session_state["ai_copilot_question"] = ai_question.strip()
-                        st.session_state["ai_copilot_error"] = None
+                        test_connection(copilot_key)
+                        st.session_state["Groq_connection_ok"] = True
+                        st.success("Connection successful.")
                     except GroqError as exc:
-                        st.session_state["ai_copilot_error"] = str(exc)
-                        st.session_state.pop("ai_copilot_answer", None)
-        if st.session_state.get("ai_copilot_error"):
-            st.error(st.session_state["ai_copilot_error"])
-        if st.session_state.get("ai_copilot_answer"):
-            st.markdown("---")
-            st.markdown("### Grok's response")
-            st.caption(f"Question: {st.session_state.get('ai_copilot_question', '')}")
-            st.markdown(st.session_state["ai_copilot_answer"])
-            st.caption("AI-generated interpretation. Verify every claim against the source data; it does not establish causality or predict outcomes.")
-        st.info("Usage is not free by default. Each submitted question may incur Groq API charges under your key's current plan. Monitor usage in the Groq console.")
+                        st.session_state["Groq_connection_ok"] = False
+                        st.error(str(exc))
+                if st.session_state.get("Groq_connection_ok"):
+                    st.caption("The latest connection check succeeded.")
+                st.caption("Provider: Groq · Model: openai/gpt-oss-20b")
+                st.caption("Only aggregate metrics, safe field metadata and this conversation's recent messages are sent after you opt in and submit a prompt.")
+                st.caption("Source rows and raw category values are excluded. Avoid confidential or regulated data.")
+                st.caption("Conversation history is held in this browser session only and is not saved as a permanent chat archive.")
+                st.caption("Each submitted prompt may use your Groq account quota or incur charges under its current plan.")
+
+        submitted_question = None
+        with chat_col:
+            st.markdown("#### DataPilot AI")
+            if st.session_state.get("ai_copilot_messages"):
+                st.caption(f"{len(st.session_state['ai_copilot_messages']) // 2} exchanges · Current dataset context")
+                for message in st.session_state["ai_copilot_messages"]:
+                    with st.chat_message(message.get("role", "assistant"), avatar="◈" if message.get("role") == "assistant" else "●"):
+                        if message.get("error"):
+                            st.warning(message.get("content", "The request could not be completed."))
+                        else:
+                            st.markdown(message.get("content", ""))
+            else:
+                st.markdown(
+                    '<div class="copilot-welcome">'
+                    '<div class="copilot-welcome-mark">◈</div>'
+                    '<h3>Your data analyst is ready.</h3>'
+                    '<p>Start with a suggested prompt or ask a question in your own words. Follow up naturally to go deeper.</p>'
+                    '<div class="copilot-welcome-note">Answers are grounded in the calculated evidence available in this workspace.</div>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+
+            consent = st.checkbox(
+                "I agree to send the disclosed aggregate analysis context and recent conversation to Groq when I submit a message.",
+                key="ai_copilot_consent",
+                disabled=not bool(copilot_key),
+            )
+            submitted_question = st.chat_input(
+                "Ask a question or follow up on the analysis…",
+                key="ai_copilot_chat_input",
+                max_chars=1_000,
+                disabled=not bool(copilot_key and consent),
+            )
+
+        question_to_send = submitted_question or st.session_state.get("ai_copilot_pending_prompt", "")
+        if question_to_send:
+            st.session_state["ai_copilot_pending_prompt"] = ""
+            question_to_send = str(question_to_send).strip()
+            if question_to_send and copilot_key and st.session_state.get("ai_copilot_consent", False):
+                st.session_state["ai_copilot_messages"].append({"role": "user", "content": question_to_send})
+                history = [
+                    message for message in st.session_state["ai_copilot_messages"][:-1]
+                    if not message.get("error")
+                ]
+                try:
+                    with st.spinner("DataPilot AI is reviewing the evidence…"):
+                        answer = ask_groq(
+                            question_to_send,
+                            ai_context,
+                            api_key=copilot_key,
+                            conversation_history=history,
+                        )
+                    st.session_state["ai_copilot_messages"].append({"role": "assistant", "content": answer})
+                except GroqError as exc:
+                    st.session_state["ai_copilot_messages"].append({"role": "assistant", "content": str(exc), "error": True})
+                st.rerun()
+        st.caption("AI-generated analysis is advisory. Validate important claims against the source data; observed associations do not establish causation.")
 
     elif page == "Settings":
         st.markdown("## Workspace settings")
