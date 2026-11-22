@@ -1429,7 +1429,7 @@ if dataset_name is not None:
             '<div class="copilot-eyebrow">DATAPILOT INTELLIGENCE · CONVERSATIONAL ANALYST</div>'
             '<h1>Think with your data.</h1>'
             '<p>Ask questions, explore evidence and build on previous answers. Your analysis engine remains the source of truth.</p>'
-            '<div class="copilot-meta"><span>◈ Evidence-grounded</span><span>✦ Follow-up aware</span><span>⌁ Private to this session</span></div>'
+            '<div class="copilot-meta"><span>◈ Evidence-grounded</span><span>✦ Follow-up aware</span><span>⌁ Session-only history</span></div>'
             '</section>',
             unsafe_allow_html=True,
         )
@@ -1482,7 +1482,7 @@ if dataset_name is not None:
                 st.caption("Provider: Groq · Model: openai/gpt-oss-20b")
                 st.caption("Only aggregate metrics, safe field metadata and this conversation's recent messages are sent after you opt in and submit a prompt.")
                 st.caption("Source rows and raw category values are excluded. Avoid confidential or regulated data.")
-                st.caption("Conversation history is held in this browser session only and is not saved as a permanent chat archive.")
+                st.caption("Conversation history is held in this Streamlit session only and is not saved as a permanent chat archive.")
                 st.caption("Each submitted prompt may use your Groq account quota or incur charges under its current plan.")
 
         submitted_question = None
