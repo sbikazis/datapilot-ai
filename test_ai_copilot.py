@@ -111,3 +111,24 @@ def test_unauthorized_key_error_is_actionable():
         raise HTTPError(request.full_url, 401, "Unauthorized", {}, BytesIO(b""))
     with pytest.raises(XAIError, match="rejected the API key"):
         check_xai_connection("bad-key", opener=opener)
+
+
+
+def test_bad_request_includes_sanitized_xai_diagnostic():
+    def opener(request, timeout):
+        body = b'{"error":{"message":"Invalid argument: unsupported field max_output_tokens"}}'
+        raise HTTPError(request.full_url, 400, "Bad Request", {}, BytesIO(body))
+
+    with pytest.raises(XAIError, match="unsupported field max_output_tokens"):
+        ask_grok("Question", {}, "test-key", opener=opener)
+
+
+def test_http_error_diagnostic_redacts_bearer_credentials():
+    def opener(request, timeout):
+        body = b'{"error":{"message":"Invalid token Bearer super-secret-token"}}'
+        raise HTTPError(request.full_url, 400, "Bad Request", {}, BytesIO(body))
+
+    with pytest.raises(XAIError) as error:
+        ask_grok("Question", {}, "test-key", opener=opener)
+    assert "super-secret-token" not in str(error.value)
+    assert "[redacted]" in str(error.value)
