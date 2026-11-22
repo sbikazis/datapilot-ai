@@ -6,11 +6,11 @@ import pandas as pd
 import pytest
 
 from ai_copilot import (
-    XAIError,
-    ask_grok,
+    GroqError,
+    ask_groq,
     build_ai_context,
     get_api_key,
-    test_connection as check_xai_connection,
+    test_connection as check_groq_connection,
 )
 
 
@@ -31,11 +31,11 @@ class FakeResponse:
 
 
 def test_api_key_prefers_streamlit_secret_without_exposing_it():
-    assert get_api_key({"XAI_API_KEY": " secret "}, {"XAI_API_KEY": "env"}) == "secret"
+    assert get_api_key({"GROQ_API_KEY": " secret "}, {"GROQ_API_KEY": "env"}) == "secret"
 
 
 def test_api_key_falls_back_to_environment():
-    assert get_api_key({}, {"XAI_API_KEY": " env-key "}) == "env-key"
+    assert get_api_key({}, {"GROQ_API_KEY": " env-key "}) == "env-key"
 
 
 def test_api_key_missing_returns_none():
@@ -64,7 +64,7 @@ def test_context_contains_aggregates_but_not_source_rows_or_sensitive_columns():
     assert "source_row_count" in context
 
 
-def test_ask_grok_posts_to_responses_api_and_extracts_text():
+def test_ask_groq_posts_to_responses_api_and_extracts_text():
     seen = {}
 
     def opener(request, timeout):
@@ -74,25 +74,25 @@ def test_ask_grok_posts_to_responses_api_and_extracts_text():
         seen["body"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse()
 
-    answer = ask_grok("Explain revenue", {"numeric_measures": [{"field": "revenue", "mean": 20}]}, "test-key", opener=opener)
+    answer = ask_groq("Explain revenue", {"numeric_measures": [{"field": "revenue", "mean": 20}]}, "test-key", opener=opener)
     assert answer == "Evidence summary."
     assert seen["url"].endswith("/responses")
     assert seen["timeout"] == 120
     assert seen["headers"]["Authorization"] == "Bearer test-key"
     assert seen["body"]["store"] is False
-    assert seen["body"]["model"] == "grok-4.7"
+    assert seen["body"]["model"] == "openai/gpt-oss-20b"
 
 
-def test_ask_grok_rejects_empty_or_oversized_question_without_network():
-    with pytest.raises(XAIError, match="Enter a question"):
-        ask_grok(" ", {}, "test-key")
-    with pytest.raises(XAIError, match="under 1000"):
-        ask_grok("x" * 1001, {}, "test-key")
+def test_ask_groq_rejects_empty_or_oversized_question_without_network():
+    with pytest.raises(GroqError, match="Enter a question"):
+        ask_groq(" ", {}, "test-key")
+    with pytest.raises(GroqError, match="under 1000"):
+        ask_groq("x" * 1001, {}, "test-key")
 
 
-def test_ask_grok_requires_key():
-    with pytest.raises(XAIError, match="not configured"):
-        ask_grok("Question", {}, api_key="")
+def test_ask_groq_requires_key():
+    with pytest.raises(GroqError, match="not configured"):
+        ask_groq("Question", {}, api_key="")
 
 
 def test_test_connection_uses_models_endpoint_without_generation():
@@ -102,25 +102,25 @@ def test_test_connection_uses_models_endpoint_without_generation():
         seen["url"] = request.full_url
         return FakeResponse({"data": []})
 
-    check_xai_connection("test-key", opener=opener)
+    check_groq_connection("test-key", opener=opener)
     assert seen["url"].endswith("/models")
 
 
 def test_unauthorized_key_error_is_actionable():
     def opener(request, timeout):
         raise HTTPError(request.full_url, 401, "Unauthorized", {}, BytesIO(b""))
-    with pytest.raises(XAIError, match="rejected the API key"):
-        check_xai_connection("bad-key", opener=opener)
+    with pytest.raises(GroqError, match="rejected the API key"):
+        check_groq_connection("bad-key", opener=opener)
 
 
 
-def test_bad_request_includes_sanitized_xai_diagnostic():
+def test_bad_request_includes_sanitized_Groq_diagnostic():
     def opener(request, timeout):
         body = b'{"error":{"message":"Invalid argument: unsupported field max_output_tokens"}}'
         raise HTTPError(request.full_url, 400, "Bad Request", {}, BytesIO(body))
 
-    with pytest.raises(XAIError, match="unsupported field max_output_tokens"):
-        ask_grok("Question", {}, "test-key", opener=opener)
+    with pytest.raises(GroqError, match="unsupported field max_output_tokens"):
+        ask_groq("Question", {}, "test-key", opener=opener)
 
 
 def test_http_error_diagnostic_redacts_bearer_credentials():
@@ -128,7 +128,7 @@ def test_http_error_diagnostic_redacts_bearer_credentials():
         body = b'{"error":{"message":"Invalid token Bearer super-secret-token"}}'
         raise HTTPError(request.full_url, 400, "Bad Request", {}, BytesIO(body))
 
-    with pytest.raises(XAIError) as error:
-        ask_grok("Question", {}, "test-key", opener=opener)
+    with pytest.raises(GroqError) as error:
+        ask_groq("Question", {}, "test-key", opener=opener)
     assert "super-secret-token" not in str(error.value)
     assert "[redacted]" in str(error.value)
