@@ -25,6 +25,7 @@ from sample_workspace import build_sample_dataset, SAMPLE_DATASET_NOTICE
 from visual_identity import THEME_OPTIONS, THEMES, resolve_theme, build_theme_css, theme_chart_colors, theme_gallery_html
 from navigation_state import activate_sample_workspace
 from upload_intelligence import read_dataset_upload, upload_preview
+from ai_copilot import XAIError, ask_grok, build_ai_context, get_api_key, test_connection
 
 st.set_page_config(
     page_title="DataPilot AI — Intelligence Studio",
@@ -343,7 +344,7 @@ with st.sidebar:
     st.markdown("---")
     page = st.radio(
         "WORKSPACE",
-        ["Overview", "Guided Analysis", "Decisions", "Analysis Studio", "Data Explorer", "Reports", "Settings"],
+        ["Overview", "Guided Analysis", "Decisions", "Analysis Studio", "Data Explorer", "Reports", "AI Copilot", "Settings"],
         key="nav_page",
         label_visibility="collapsed",
     )
@@ -1291,6 +1292,76 @@ if dataset_name is not None:
         st.info("HTML is print-friendly and can be saved as PDF from your browser. A native PDF export, scheduled delivery and saved report history are not included yet.")
 
     # ── Settings ────────────────────────────────────────────────────────────────
+    elif page == "AI Copilot":
+        st.markdown("## AI Copilot")
+        st.caption("Ask Grok to explain the evidence already calculated by DataPilot. Your local analysis engine remains the source of truth.")
+        st.markdown(
+            '<div class="card"><div class="card-label">OPTIONAL EXTERNAL AI</div>'
+            '<div class="card-title">Evidence first. AI explanation second.</div>'
+            '<div class="card-copy">Grok receives aggregate summaries and selected analysis metadata only after you consent and submit a question. Source rows and raw category values are not sent. Avoid confidential or regulated data.</div></div>',
+            unsafe_allow_html=True,
+        )
+        copilot_key = get_api_key(st.secrets)
+        if copilot_key:
+            st.success("XAI_API_KEY is configured in this app's runtime.")
+        else:
+            st.warning("XAI_API_KEY was not found in the app runtime. Add it in Streamlit Cloud → App settings → Secrets, then reload the app.")
+        connection_col, connection_note = st.columns([1, 2])
+        with connection_col:
+            if st.button("Test xAI connection", key="test_xai_connection", disabled=not bool(copilot_key)):
+                try:
+                    test_connection(copilot_key)
+                    st.session_state["xai_connection_ok"] = True
+                    st.success("Connection successful. The key can access the xAI API.")
+                except XAIError as exc:
+                    st.session_state["xai_connection_ok"] = False
+                    st.error(str(exc))
+        with connection_note:
+            st.caption("Checks API-key access through the models endpoint. It does not generate an answer or consume model output tokens.")
+        st.markdown("### Ask your data")
+        st.caption("The question is sent only when you check the consent box and press Ask Grok.")
+        with st.form("ai_copilot_question_form"):
+            ai_question = st.text_area(
+                "What would you like to understand?",
+                placeholder="Example: Which patterns deserve investigation, and what evidence supports them?",
+                max_chars=1000,
+                height=110,
+            )
+            ai_consent = st.checkbox(
+                "I agree to send the disclosed aggregate analysis summary and my question to xAI for this request.",
+                key="ai_copilot_consent",
+            )
+            ai_submit = st.form_submit_button("Ask Grok", type="primary", disabled=not bool(copilot_key))
+        if ai_submit:
+            if not ai_consent:
+                st.error("Please confirm the data-sharing disclosure before sending a request.")
+            elif not ai_question.strip():
+                st.error("Enter a question first.")
+            else:
+                with st.spinner("Grok is reviewing the evidence summary…"):
+                    try:
+                        ai_context = build_ai_context(
+                            data, filtered, numeric_cols, category_cols, date_cols,
+                            domain_assessment["domain"], profile.insights, next_questions,
+                        )
+                        st.session_state["ai_copilot_answer"] = ask_grok(
+                            ai_question, ai_context, api_key=copilot_key,
+                        )
+                        st.session_state["ai_copilot_question"] = ai_question.strip()
+                        st.session_state["ai_copilot_error"] = None
+                    except XAIError as exc:
+                        st.session_state["ai_copilot_error"] = str(exc)
+                        st.session_state.pop("ai_copilot_answer", None)
+        if st.session_state.get("ai_copilot_error"):
+            st.error(st.session_state["ai_copilot_error"])
+        if st.session_state.get("ai_copilot_answer"):
+            st.markdown("---")
+            st.markdown("### Grok's response")
+            st.caption(f"Question: {st.session_state.get('ai_copilot_question', '')}")
+            st.markdown(st.session_state["ai_copilot_answer"])
+            st.caption("AI-generated interpretation. Verify every claim against the source data; it does not establish causality or predict outcomes.")
+        st.info("Usage is not free by default. Each submitted question may incur xAI API charges under your key's current plan. Monitor usage in the xAI console.")
+
     elif page == "Settings":
         st.markdown("## Workspace settings")
         st.caption("Control the current workspace presentation and analysis defaults. These settings are session-local.")
