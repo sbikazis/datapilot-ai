@@ -142,3 +142,30 @@ def test_cloudflare_browser_signature_block_is_not_misreported_as_bad_api_key():
 
     with pytest.raises(GroqError, match="Cloudflare 1010.*not evidence that your API key is invalid"):
         ask_groq("Question", {}, "test-key", opener=opener)
+
+
+def test_feature_ai_context_adds_numeric_section_detail_without_raw_or_sensitive_values():
+    from ai_copilot import build_feature_ai_context
+
+    base = {"filtered_row_count": 12, "numeric_measures": [{"field": "revenue", "mean": 20}]}
+    context = build_feature_ai_context(
+        base,
+        "guided analysis result",
+        metrics={
+            "valid_observations": 12,
+            "mean_revenue": 20.5,
+            "customer_email": 3,
+            "region": "North",
+            "customer_name": "Alice",
+            "infinite_value": float("inf"),
+        },
+        evidence_kinds=["segment difference", "data quality"],
+    )
+
+    serialized = json.dumps(context)
+    assert context["active_workspace_section"] == "guided analysis result"
+    assert context["section_metrics"] == {"valid_observations": 12, "mean_revenue": 20.5}
+    assert context["evidence_types"] == ["segment difference", "data quality"]
+    assert "North" not in serialized
+    assert "Alice" not in serialized
+    assert "customer_email" not in serialized

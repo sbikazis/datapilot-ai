@@ -62,13 +62,14 @@ The next release priorities are deployment verification, accessibility review, b
 DataPilot reports the detected file format, text encoding and delimiter (or selected Excel worksheet), row/column counts, exact duplicate rows, empty columns, and structural warnings. A read-only source preview is available before deeper analysis. Nested JSON normalization is disclosed. Delimited files with inconsistent row widths are rejected with an actionable error rather than silently dropping malformed records. Intake diagnostics do not automatically repair or rewrite uploaded values; uploads remain session-local.
 
 
-## Optional Groq AI Copilot
+## Evidence-grounded AI assistance
 
-The optional AI Copilot uses the Groq Responses API (model `openai/gpt-oss-20b`) to explain DataPilot's existing evidence and answer questions about the current analysis. It does not replace or recalculate the deterministic analysis engine.
+DataPilot can use the Groq Responses API (model `openai/gpt-oss-20b`) to explain computed results across Overview, Guided Analysis, Decisions and Reports, as well as answer free-form questions in AI Copilot. The deterministic analysis engine remains the source of truth: AI explains existing evidence and does not recalculate or alter metrics.
 
 - Configure `GROQ_API_KEY` in Streamlit Cloud **App settings → Secrets**; never commit the key or paste it into source code.
-- The Copilot is opt-in. A user must explicitly confirm the disclosure and submit a question before an AI request is made.
-- Only aggregate numeric summaries, field-role metadata, row counts and finding metadata are sent. Source rows, raw category values and fields with names suggesting direct personal identifiers are excluded.
+- Workspace explainers require an explicit **Enable AI explanations** choice in the sidebar and a separate click on the relevant explanation action. No model request runs automatically on page load.
+- AI Copilot questions require the user to confirm the data-sharing disclosure and submit the question.
+- Requests use aggregate numeric summaries, row counts, field-role metadata and non-sensitive evidence types. Source rows, raw category values and fields with names suggesting direct personal identifiers are excluded.
 - Requests use `store: false`. This request-level setting is not a promise about every provider-side operational log or retention obligation; review Groq's current data terms before using confidential or regulated data.
-- API calls may incur usage charges. A connection check calls the models endpoint and does not generate a response; asking a question consumes model usage.
-- If the key is missing or Groq is unavailable, local profiling, charts, findings and reports continue to work.
+- API calls may incur usage charges under the key's current plan. A connection check calls the models endpoint and does not generate a response; each explanation or question consumes model usage.
+- If the key is missing or Groq is unavailable, local profiling, charts, findings and reports continue to work. AI assistance is an enhancement, not a dependency for core analysis.
