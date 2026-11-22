@@ -14,7 +14,7 @@ MAX_QUESTION_CHARS = 1_000
 MAX_CONTEXT_CHARS = 12_000
 SENSITIVE_FIELD = re.compile(
     r"(email|e-mail|phone|mobile|telephone|address|street|postcode|postal|"
-    r"first.?name|last.?name|full.?name|customer.?name|person.?name|(^|[_\s-])name($|[_\\s-])|"
+    r"first.?name|last.?name|full.?name|customer.?name|person.?name|(^|[_\s-])name($|[_\s-])|"
     r"ssn|social.?security|passport|national.?id|account.?number|"
     r"credit.?card|iban|password|token|secret)",
     re.IGNORECASE,
