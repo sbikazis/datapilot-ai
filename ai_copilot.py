@@ -150,15 +150,36 @@ def _extract_response_text(payload: dict[str, Any]) -> str:
 
 
 def _safe_http_error(exc: HTTPError) -> XAIError:
+    """Translate xAI errors while preserving a short, safe provider diagnostic."""
+    detail = ""
+    try:
+        raw = exc.read(4_096).decode("utf-8", errors="replace")
+        payload = json.loads(raw) if raw else {}
+        if isinstance(payload, dict):
+            error = payload.get("error", payload)
+            if isinstance(error, dict):
+                detail = error.get("message") or error.get("detail") or ""
+            elif isinstance(error, str):
+                detail = error
+        if not isinstance(detail, str):
+            detail = ""
+        detail = " ".join(detail.split())[:240]
+        # Never surface credential-shaped strings returned by an upstream error.
+        detail = re.sub(r"(?i)(bearer\s+)[^\s,;]+", r"\1[redacted]", detail)
+        detail = re.sub(r"(?i)(xai[-_ ]?api[-_ ]?key\s*[:=]\s*)[^\s,;]+", r"\1[redacted]", detail)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
+        detail = ""
+
+    suffix = f" xAI says: {detail}" if detail else ""
     if exc.code == 401:
-        return XAIError("xAI rejected the API key. Check that XAI_API_KEY is correct and active in Streamlit Secrets.")
+        return XAIError("xAI rejected the API key. Check that XAI_API_KEY is correct and active in Streamlit Secrets." + suffix)
     if exc.code == 403:
-        return XAIError("This API key does not have permission to use the requested xAI API.")
+        return XAIError("This API key does not have permission to use the requested xAI API." + suffix)
     if exc.code == 429:
-        return XAIError("The xAI API rate or usage limit was reached. Check your xAI console usage and billing.")
+        return XAIError("The xAI API rate or usage limit was reached. Check your xAI console usage and billing." + suffix)
     if exc.code >= 500:
-        return XAIError("The xAI service is temporarily unavailable. Your local analysis is still available.")
-    return XAIError(f"xAI request failed (HTTP {exc.code}). Your local analysis is still available.")
+        return XAIError("The xAI service is temporarily unavailable. Your local analysis is still available." + suffix)
+    return XAIError(f"xAI request failed (HTTP {exc.code}). Your local analysis is still available." + suffix)
 
 
 def test_connection(api_key: str | None = None, *, opener=urlopen) -> None:
