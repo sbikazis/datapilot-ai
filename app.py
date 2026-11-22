@@ -220,55 +220,8 @@ accent_colors = {
 accent_primary, accent_secondary = accent_colors.get(st.session_state.accent_palette, accent_colors["Violet"])
 st.markdown(f"<style>:root{{--violet:{accent_primary};--violet2:{accent_secondary}}}.brandmark{{background:linear-gradient(135deg,{accent_primary},{accent_secondary})}}.stButton>button[kind='primary']{{background:linear-gradient(110deg,{accent_primary},{accent_secondary})!important}}</style>", unsafe_allow_html=True)
 
-if st.session_state.theme_mode == "Dark":
-    st.markdown("""
-    <style>
-    .stApp{background:#101626;color:#e8ecf8}
-    h1,h2,h3,h4{color:#edf0ff!important}
-    .card,.insight,.signal-card,.health-card,.domain-card,[data-testid="stMetric"],[data-testid="stPlotlyChart"],[data-testid="stExpander"],[data-testid="stDataFrame"]{background:#192238!important;border-color:#2c3854!important;color:#e8ecf8}
-    .card-title,.insight strong,.signal-title,.health-heading strong,.health-row strong,.health-row b,.loaded-dataset strong{color:#edf0ff!important}
-    .card-copy,.insight p,.signal-card p,.health-row span,.health-foot,.subtle{color:#aab5ce!important}
-    .next-step{background:#202a43!important;border-color:#374360!important}
-    .next-step strong{color:#edf0ff!important}
-    .health-track{background:#303b55!important}
-    .loaded-dataset{background:#192238!important;border-color:#2c5b51!important}
-    .workspace-topbar{background:#192238!important;border-color:#2c3854!important}
-    .workspace-filename{color:#edf0ff!important}
-    .workspace-detail,.replace-label{color:#aab5ce!important}
-    .workspace-session{background:#29354f!important;border-color:#3b4866!important;color:#c0c9df!important}
-
-    .overview-live{background:#17352f!important;border-color:#285c50!important;color:#a5e4cf!important}
-    .signal-meta span{background:#29354f!important;color:#c0c9df!important}
-    .pagehead,.upload-panel,.upload-guidance,.signal-card{background:#192238!important;border-color:#2c3854!important}
-    .dataset-summary>span{background:#192238!important;border-color:#2c3854!important;color:#aab5ce!important}
-    .dataset-summary .dataset-kind{background:#17352f!important;border-color:#285c50!important;color:#a5e4cf!important}
-    .dataset-summary .dataset-recommendation{background:transparent!important;border-color:transparent!important}
-
-    .upload-panel h2,.upload-guidance .card-label,.pagehead h2{color:#edf0ff!important}
-    .upload-panel p,.upload-guidance .card-copy,.pagehead .subtle{color:#aab5ce!important}
-    .format-list span{background:#29354f!important;color:#c0c9df!important;border-color:#3b4866!important}
-    [data-testid="stMetric"]{background:linear-gradient(145deg,#1b2945,#192238)!important}
-    [data-testid="stPlotlyChart"]{background:#192238!important}
-    .stTextInput input,.stSelectbox div[data-baseweb="select"],.stMultiSelect div[data-baseweb="select"]{background:#192238;color:#edf0ff}
-    [data-testid="stMetricValue"]{color:#edf0ff}
-    [data-testid="stMetricLabel"]{color:#aab5ce!important}
-    </style>
-    """, unsafe_allow_html=True)
-# Keep Plotly visuals consistent with the scientific / nebula design language.
-plot_text = "#dce6ff" if st.session_state.theme_mode == "Dark" else "#53617d"
-plot_grid = "rgba(190,202,232,.14)" if st.session_state.theme_mode == "Dark" else "rgba(114,132,177,.14)"
-px.defaults.color_discrete_sequence = ["#167d83", "#4f7894", "#8b9b78", "#c08b4e", "#7184a0", "#8c9a9e"]
-px.defaults.color_continuous_scale = ["#e5f1f0", "#83b7b4", "#167d83", "#164d60"]
-px.defaults.template = go.layout.Template(layout=go.Layout(
-    font=dict(family="DM Sans, sans-serif", color=plot_text),
-    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-    xaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
-    yaxis=dict(showgrid=True, gridcolor=plot_grid, zerolinecolor=plot_grid, linecolor=plot_grid),
-    colorway=["#167d83", "#4f7894", "#8b9b78", "#c08b4e", "#7184a0", "#8c9a9e"],
-))
-
-if st.session_state.density == "Compact":
-    st.markdown("<style>.block-container{padding-top:.8rem;padding-bottom:2rem}[data-testid='stMetric']{min-height:84px;padding:10px 13px}.card,.insight{padding:12px 14px;margin-bottom:7px}</style>", unsafe_allow_html=True)
+# Appearance tokens and chart palettes are applied by the shared visual system below.
+# Avoid legacy hard-coded dark-mode overrides: they caused conflicting text colors.
 
 # Apply a complete, accessible visual system before rendering the workspace.
 _initial_visual_theme = resolve_theme(st.session_state.visual_theme, "General / mixed data")
