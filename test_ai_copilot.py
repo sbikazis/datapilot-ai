@@ -79,6 +79,7 @@ def test_ask_groq_posts_to_responses_api_and_extracts_text():
     assert seen["url"].endswith("/responses")
     assert seen["timeout"] == 120
     assert seen["headers"]["Authorization"] == "Bearer test-key"
+    assert seen["headers"]["User-agent"] == "DataPilotAI/1.0 (+https://github.com/sbikazis/datapilot-ai)"
     assert seen["body"]["store"] is False
     assert seen["body"]["model"] == "openai/gpt-oss-20b"
 
@@ -132,3 +133,12 @@ def test_http_error_diagnostic_redacts_bearer_credentials():
         ask_groq("Question", {}, "test-key", opener=opener)
     assert "super-secret-token" not in str(error.value)
     assert "[redacted]" in str(error.value)
+
+
+def test_cloudflare_browser_signature_block_is_not_misreported_as_bad_api_key():
+    def opener(request, timeout):
+        body = b'{"error_code":1010,"error_name":"browser_signature_banned","detail":"The site owner has blocked access based on your browser signature."}'
+        raise HTTPError(request.full_url, 403, "Forbidden", {}, BytesIO(body))
+
+    with pytest.raises(GroqError, match="Cloudflare 1010.*not evidence that your API key is invalid"):
+        ask_groq("Question", {}, "test-key", opener=opener)
