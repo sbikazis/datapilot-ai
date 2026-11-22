@@ -224,6 +224,38 @@ a{color:var(--accent)!important;text-decoration-thickness:1px;text-underline-off
 @media(max-width:900px){.main .block-container{padding-left:1rem;padding-right:1rem}.hero,.copilot-hero{border-radius:18px!important}.workspace-topbar{flex-wrap:wrap;align-items:flex-start}.dataset-summary{gap:6px}}
 @media(max-width:768px){[data-testid="stHorizontalBlock"]{flex-wrap:wrap!important;gap:.85rem!important}[data-testid="column"]{min-width:100%!important;flex:1 1 100%!important}.main .block-container{padding-top:.9rem;padding-bottom:2rem}.theme-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}[data-testid="stMetric"]{min-height:78px}}
 @media(max-width:480px){.main .block-container{padding-left:.75rem;padding-right:.75rem}.main h1{font-size:1.55rem!important}.main h2{font-size:1.2rem!important}.hero,.copilot-hero{padding:20px!important;border-radius:15px!important}.hero-meta{font-size:.58rem}.copilot-meta{gap:5px}.copilot-meta span{font-size:.65rem}[data-testid="stMetric"]{padding:10px!important}.stButton>button,.stDownloadButton>button{width:100%}}
+/* Explicit contrast for Streamlit markdown, custom HTML panels and widget internals. */
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] h1,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] h2,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] h3,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] h4,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] li,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] strong,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] em,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] blockquote,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] td,
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] th,
+[data-testid="stMain"] [data-testid="stWidgetLabel"] *,
+[data-testid="stMain"] [data-testid="stFileUploader"] label,
+[data-testid="stMain"] [data-testid="stFileUploader"] small {color:var(--text)!important}
+.upload-panel h2,.pagehead h2,.health-heading,.health-heading strong,.health-row strong,.health-row b,.card-title,.signal-title,.workspace-filename {color:var(--text)!important}
+.upload-panel p,.upload-panel .subtle,.pagehead p,.pagehead .subtle,.health-row span,.health-foot,.workspace-detail,.replace-label,.kicker,.card-label,.brandtag,.dataset-summary {color:var(--muted)!important}
+[data-testid="stMain"] [data-testid="stTextInput"] input,
+[data-testid="stMain"] [data-testid="stTextArea"] textarea,
+[data-testid="stMain"] [data-testid="stNumberInput"] input,
+[data-testid="stMain"] [data-baseweb="select"] input,
+[data-testid="stMain"] [data-testid="stSelectbox"] [data-baseweb="select"] *,
+[data-testid="stMain"] [data-testid="stMultiSelect"] [data-baseweb="select"] *,
+[data-testid="stMain"] [data-testid="stRadio"] label *,
+[data-testid="stMain"] [data-testid="stCheckbox"] label *,
+[data-testid="stMain"] [data-testid="stDateInput"] input {color:var(--text)!important}
+[data-testid="stMain"] [data-testid="stWidgetLabel"] p,
+[data-testid="stMain"] [data-testid="stWidgetLabel"] span,
+[data-testid="stMain"] [data-testid="stWidgetLabel"] label {color:var(--text)!important}
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] a,[data-testid="stMain"] a {color:var(--accent)!important}
+.hero h1,.copilot-hero h1 {color:#fff!important}
+.hero p,.copilot-hero p {color:#e8eaf7!important}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 """
