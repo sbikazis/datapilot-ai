@@ -47,9 +47,10 @@ def test_context_contains_aggregates_but_not_source_rows_or_sensitive_columns():
         "revenue": [10, 20, 30],
         "region": ["North", "South", "North"],
         "customer_email": ["a@example.com", "b@example.com", "c@example.com"],
+        "name": ["Alice", "Bob", "Cara"],
     })
     context = build_ai_context(
-        frame, frame, ["revenue"], ["region", "customer_email"], [],
+        frame, frame, ["revenue"], ["region", "customer_email", "name"], [],
         "Sales & commerce", [{"kind": "trend", "evidence_level": "exploratory", "title": "North"}], [],
     )
     serialized = json.dumps(context)
@@ -57,6 +58,7 @@ def test_context_contains_aggregates_but_not_source_rows_or_sensitive_columns():
     assert "North" not in serialized
     assert "example.com" not in serialized
     assert "a@example.com" not in serialized
+    assert "Alice" not in serialized
     assert "source_row_count" in context
 
 
