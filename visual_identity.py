@@ -97,6 +97,46 @@ def build_theme_css(theme: dict, mode: str = "Light", density: str = "Comfortabl
 .main h3{font-size:1.08rem!important;font-weight:720!important}
 .main p,.main li,.main label{color:var(--text)}
 .main [data-testid="stCaptionContainer"],.main .subtle,.main .card-copy,.main .overview-intro{color:var(--muted)!important}
+/* Theme transition and text-contrast contract: keep every text layer readable during mode changes. */
+html,body,.stApp,[data-testid="stAppViewContainer"],[data-testid="stSidebar"],.main,.main .block-container,
+[data-testid="stVerticalBlock"],[data-testid="stHorizontalBlock"],[data-testid="column"],
+[data-testid="stMetric"],[data-testid="stChatMessage"],[data-testid="stChatInput"],
+[data-testid="stExpander"],[data-testid="stDataFrame"],[data-testid="stTable"],
+[data-testid="stTabs"] button,.stButton>button,.stDownloadButton>button,
+.stTextInput input,.stTextArea textarea,.stNumberInput input,[data-baseweb="select"]>div,
+[data-testid="stDateInput"] input,.main [data-testid="stMarkdownContainer"],
+.main [data-testid="stCaptionContainer"],.main p,.main li,.main label,.main small,
+.main strong,.main em,.main code,.main blockquote,.main th,.main td,
+[data-testid="stSidebar"] p,[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] small,[data-testid="stSidebar"] [data-testid="stMarkdownContainer"]{
+ transition:color .24s ease,background-color .24s ease,border-color .24s ease,box-shadow .24s ease!important;
+}
+.main [data-testid="stMarkdownContainer"],.main [data-testid="stMarkdownContainer"] p,
+.main [data-testid="stMarkdownContainer"] li,.main [data-testid="stMarkdownContainer"] span,
+.main [data-testid="stMarkdownContainer"] strong,.main [data-testid="stMarkdownContainer"] em,
+.main [data-testid="stMarkdownContainer"] code,.main [data-testid="stMarkdownContainer"] blockquote,
+.main [data-testid="stMarkdownContainer"] td,.main [data-testid="stMarkdownContainer"] th,
+.main [data-testid="stCaptionContainer"],.main [data-testid="stText"],
+.main [data-testid="stWidgetLabel"],.main [data-testid="stRadio"] label,
+.main [data-testid="stCheckbox"] label,.main [data-testid="stSelectbox"] label,
+.main [data-testid="stMultiSelect"] label,.main [data-testid="stSlider"] label,
+.main [data-testid="stNumberInput"] label,.main [data-testid="stTextInput"] label,
+.main [data-testid="stTextArea"] label,.main [data-testid="stDateInput"] label{
+ color:var(--text)!important;
+}
+.main [data-testid="stCaptionContainer"],.main [data-testid="stCaptionContainer"] *,
+.main [data-testid="stMarkdownContainer"] .subtle,.main .subtle,
+.main .card-copy,.main .overview-intro,.main .signal-next,
+.main .health-foot,.main .workspace-detail,.main .theme-preview-mood,
+.main .copilot-side-label,.main .dataset-summary{
+ color:var(--muted)!important;
+}
+.main [data-testid="stMarkdownContainer"] a,.main a{color:var(--accent)!important}
+.main [data-testid="stMarkdownContainer"] code{background:var(--surface-2)!important;border:1px solid var(--line);border-radius:5px;padding:.08em .3em}
+.main [data-testid="stMarkdownContainer"] pre{background:var(--surface-2)!important;border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto}
+.main [data-testid="stMarkdownContainer"] pre code{border:0;padding:0;background:transparent!important}
+.main input::placeholder,.main textarea::placeholder,[data-testid="stChatInput"] textarea::placeholder{color:var(--muted)!important;opacity:.82}
+.main input:disabled,.main textarea:disabled,.main button:disabled{color:var(--muted)!important;opacity:.62}
 [data-testid="stSidebar"]{background:var(--sidebar)!important;border-right:1px solid color-mix(in srgb,var(--sidebar-text) 13%,transparent)}
 [data-testid="stSidebar"] *{color:var(--sidebar-text)}
 [data-testid="stSidebar"] [data-testid="stCaptionContainer"],[data-testid="stSidebar"] small{color:color-mix(in srgb,var(--sidebar-text) 72%,transparent)!important}
