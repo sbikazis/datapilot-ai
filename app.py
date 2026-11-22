@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from html import escape
 from io import BytesIO
+import hashlib
 import json
 import re
 
@@ -341,6 +342,23 @@ def render_ai_explanation(section_key, section_label, base_context, metrics=None
         return
 
     state_key = f"ai_explanation_{section_key}"
+    fingerprint_payload = json.dumps(
+        {
+            "section": section_label,
+            "base_context": base_context,
+            "metrics": metrics or {},
+            "evidence_kinds": evidence_kinds or [],
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+        default=str,
+    )
+    fingerprint = hashlib.sha256(fingerprint_payload.encode("utf-8")).hexdigest()
+    fingerprint_key = f"{state_key}_fingerprint"
+    if st.session_state.get(fingerprint_key) != fingerprint:
+        st.session_state.pop(state_key, None)
+        st.session_state.pop(f"{state_key}_error", None)
+        st.session_state[fingerprint_key] = fingerprint
     if st.button("Explain this with AI", key=f"request_{state_key}"):
         with st.spinner("AI is interpreting the computed evidence…"):
             try:
