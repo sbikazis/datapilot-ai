@@ -66,3 +66,16 @@ def test_theme_gallery_renders_all_choices_and_marks_the_active_theme():
     assert 'class="theme-preview is-selected"' in gallery
     assert "Botanical" in gallery
     assert "is-selected" in gallery
+
+
+def test_theme_css_transitions_text_and_preserves_contrast_hierarchy():
+    from visual_identity import THEMES, build_theme_css
+
+    for mode in ("Light", "Dark"):
+        css = build_theme_css(THEMES["Nebula / sci-fi"], mode)
+        assert "transition:color .24s ease" in css
+        assert ".main [data-testid=\"stMarkdownContainer\"]" in css
+        assert ".main input::placeholder" in css
+        assert "color:var(--muted)!important" in css
+        assert "color:var(--text)!important" in css
+        assert "prefers-reduced-motion:reduce" in css
