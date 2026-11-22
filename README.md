@@ -1,35 +1,40 @@
 # DataPilot AI
 
-**Adaptive Data Intelligence Studio** for CSV, TSV, Excel and JSON datasets. DataPilot profiles each upload first, then lets users investigate it through a workspace shaped around the detected fields.
+**Adaptive Data Intelligence Studio** for CSV, TSV, Excel and JSON datasets. DataPilot profiles a dataset, helps users investigate it through evidence-led analysis, and exports executive-ready reports.
 
-## Current capabilities
+## What the product does today
 
-- A dedicated workspace with Overview, Guided Analysis, Decisions, Analysis Studio, Data Explorer, Reports and Settings.
-- Configurable workspace name, subtitle, uploaded logo or initials, accent palette, dark appearance by default, with an optional light-mode switch, and compact/comfortable density (session-local).
-- Functional analysis defaults for starting view, Top N, numeric precision and report methodology notes.
-- CSV, TSV, XLSX, XLS and JSON table ingestion, including worksheet selection for Excel workbooks.
-- Automatic field profiling for measures, categories, identifiers and dates, with a reviewable field-role override.
-- Conservative semantic hints for percentages, currency-like amounts (without guessing the currency), durations, coordinates, booleans, URLs and personal-data identifiers such as email/phone.
-- Global category filters applied across overview findings, analysis views, exploration and reports.
-- Adaptive analysis recommendations, descriptive statistics, IQR outlier review, category concentration, date coverage, evidence-backed relationships and sample-aware segment differences with minimum-group-size safeguards.
-- Interactive group comparisons, time trends, distributions, scatter plots, category composition and source-row exploration.
-- Select marks in comparison, composition and scatter charts to drill into the exact matching source records, preview up to 500 rows and export the selection.
-- Client-ready HTML executive report with recipient, author and clearly attributed analyst note; multi-sheet XLSX workbook, CSV extracts and JSON analysis profile.
-- A reusable statistical layer with deterministic tests for recommendations, summaries, correlations, category shares and insight evidence.
+- Upload CSV, TSV, XLSX, XLS and JSON datasets; inspect intake diagnostics and a read-only source preview.
+- Detect numeric measures, categories, identifiers and date fields, with user-controlled role overrides.
+- Review missing values, duplicates, outliers, date coverage, category concentration and evidence-backed relationships.
+- Explore interactive comparisons, time trends, distributions, scatter plots and source-row drill-downs.
+- Use Overview, Guided Analysis, Decisions, Analysis Studio, Data Explorer and Reports workspaces.
+- Export a self-contained HTML executive report and multi-sheet XLSX workbook, plus CSV extracts and a JSON analysis profile.
+- Optionally request evidence-grounded AI explanations across the workspace or ask follow-up questions in AI Copilot using Groq (model `openai/gpt-oss-20b`).
+- Choose Light or Dark appearance (Dark is the default), visual themes and interface density.
 
-## First-run experience
+## First-run demo
 
-Choose **Explore the sample dataset** on the welcome screen to open a reproducible, locally generated fictional orders dataset. It flows through the same profiling, guided analysis, decisions and reporting features as an uploaded file. The sample is clearly labeled synthetic and is not evidence about any real business or customer.
+Choose **Explore the sample dataset** on the welcome screen to open a reproducible, locally generated fictional orders dataset. It exercises the same profiling, analysis and reporting workflow as an uploaded file. It is clearly labeled synthetic and is not evidence about a real business or customer.
 
-Suggested first steps: compare revenue by region, inspect time movement, review order status and data quality, then export an executive report. Uploading your own file replaces the sample for that session.
+## Trust, privacy and limitations
 
-## Validation
+- Deterministic calculations and rules are the source of truth. AI explains computed evidence; it does not recalculate or alter metrics, and it must not invent currency, causality, forecasts or missing business facts.
+- AI is opt-in. Workspace explanations require consent and an explicit action; Copilot requires a separate data-sharing confirmation before a request.
+- AI requests use aggregate numeric summaries and metadata rather than source rows or raw category values. Fields that appear to contain direct identifiers or sensitive information are excluded by the context builder. Do not upload confidential, regulated or unnecessary personal data.
+- Requests use `store: false`; this request-level setting is not a promise about all provider-side operational logging or retention. Review Groq's current terms before using sensitive business data.
+- Uploaded files and workspace preferences are session-local. Persistent accounts, cloud-saved projects, collaboration, saved report history, native PDF generation and in-app payment processing are not implemented.
+- DataPilot is an analytical aid, not an accounting system, audit, tax opinion or guarantee of business outcomes. Validate field definitions, source coverage and findings before acting.
 
-The automated suite covers individual analysis engines and a full sample-customer journey plus real CSV, XLSX and JSON upload-to-report journeys: file intake, schema and domain detection, guided investigation, evidence ranking, action-register traceability, source-row scope, report metrics, HTML output and workbook tables. Small-sample behavior and the synthetic-data disclosure are also regression-tested.
+## Commercial pilot
 
-```bash
-pytest -q
-```
+DataPilot is being offered initially as a **human-reviewed, one-off sales-data analysis service**, not as a self-serve paid SaaS subscription.
+
+**Pilot deliverable:** a concise executive report based on one customer-provided CSV or Excel export, including data-quality notes, key measures, evidence-led findings, recommended validation steps and an XLSX workbook.
+
+**Introductory test price:** US$49 per report. This is an experimental price, not a published in-app checkout price. Scope and turnaround must be agreed before accepting a customer's file. No payment processing or automated customer-data storage is provided by the app.
+
+See [SALES_OFFER.md](SALES_OFFER.md) for the customer-facing offer and operating boundaries.
 
 ## Run locally
 
@@ -42,35 +47,16 @@ pytest -q
 streamlit run app.py
 ```
 
-## Trust and limitations
+## AI configuration
 
-- Automatic findings are deterministic statistics and rules. **This release is not connected to a generative AI model.**
-- Findings include denominators and method caveats where applicable; associations do not establish causation.
-- IQR outliers are review prompts, not automatic data errors.
-- Field-role overrides are user-controlled; ambiguous values should be reviewed before relying on an analysis.
-- The app does not invent currency, tax, refund, shipping, inventory, forecasts or other missing business facts.
-- Files and workspace preferences are session-local. User accounts, persistent cloud projects, team collaboration, saved report history, native PDF generation and payment processing are not implemented.
-- Avoid uploading unnecessary personal or sensitive information.
+Set `GROQ_API_KEY` in Streamlit Cloud **App settings → Secrets**. Never commit the key or paste it into source code. If the key is unavailable, local profiling, analysis and exports continue to work without AI.
 
-## Product direction
+## Validation
 
-The next release priorities are deployment verification, accessibility review, broader file diagnostics and commercial readiness. Optional generative AI must remain opt-in, evidence-grounded and privacy-transparent.
+Run the automated test suite with:
 
+```bash
+pytest -q
+```
 
-## Transparent file intake
-
-DataPilot reports the detected file format, text encoding and delimiter (or selected Excel worksheet), row/column counts, exact duplicate rows, empty columns, and structural warnings. A read-only source preview is available before deeper analysis. Nested JSON normalization is disclosed. Delimited files with inconsistent row widths are rejected with an actionable error rather than silently dropping malformed records. Intake diagnostics do not automatically repair or rewrite uploaded values; uploads remain session-local.
-
-
-## Evidence-grounded AI assistance
-
-DataPilot can use the Groq Responses API (model `openai/gpt-oss-20b`) to explain computed results across Overview, Guided Analysis, Decisions and Reports, as well as answer free-form questions in AI Copilot. The deterministic analysis engine remains the source of truth: AI explains existing evidence and does not recalculate or alter metrics.
-
-- Configure `GROQ_API_KEY` in Streamlit Cloud **App settings → Secrets**; never commit the key or paste it into source code.
-- Workspace explainers require an explicit **Enable AI explanations** choice in the sidebar and a separate click on the relevant explanation action. No model request runs automatically on page load.
-- AI Copilot uses a chat-style interface with session-only conversation history and follow-up questions. The most recent 10 user/assistant messages are included with each new prompt; history resets when the active analysis context changes or the user starts a new conversation.
-- AI Copilot requires the user to confirm the data-sharing disclosure before submitting a message. No request is made merely by opening the page.
-- Requests use aggregate numeric summaries, row counts, field-role metadata and non-sensitive evidence types. Source rows, raw category values and fields with names suggesting direct personal identifiers are excluded.
-- Requests use `store: false`. This request-level setting is not a promise about every provider-side operational log or retention obligation; review Groq's current data terms before using confidential or regulated data.
-- API calls may incur usage charges under the key's current plan. A connection check calls the models endpoint and does not generate a response; each explanation or question consumes model usage.
-- If the key is missing or Groq is unavailable, local profiling, charts, findings and reports continue to work. AI assistance is an enhancement, not a dependency for core analysis.
+The suite covers analysis engines, upload-to-report journeys, report metrics and exports, AI context safeguards, visual themes and UI logic.
