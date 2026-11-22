@@ -79,3 +79,6 @@ def test_theme_css_transitions_text_and_preserves_contrast_hierarchy():
         assert "color:var(--muted)!important" in css
         assert "color:var(--text)!important" in css
         assert "prefers-reduced-motion:reduce" in css
+        assert '[data-testid="stMain"] [data-testid="stMarkdownContainer"] h2' in css
+        assert ".upload-panel h2" in css
+        assert '[data-testid="stWidgetLabel"] *' in css
