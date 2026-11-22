@@ -1,68 +1,54 @@
 # DataPilot AI — Sales Data Intelligence Pilot
 
-## Customer-facing offer
+## The offer
 
-**Turn your sales export into a clear picture of what is happening in your business.**
+**Make your sales export easier to understand — without buying another analytics platform.**
 
-DataPilot AI helps small online sellers and ecommerce operators understand the data they already have. Send one CSV or Excel sales export and receive a human-reviewed analysis report that highlights what the data supports, what needs checking, and where to investigate next.
+DataPilot AI turns one sanitized CSV or Excel sales export into a concise, human-reviewed report. The aim is practical clarity: what the supplied data shows, where comparisons are reliable, what needs checking, and which questions deserve attention next.
 
-### What is included
+**Introductory pilot: US$49 for one dataset and one report.** This is a proposed validation price, not a proven market price or an in-app checkout price. Confirm scope, delivery timing and a lawful, traceable payment method before accepting work.
 
-- A review of the file structure and data quality (missing values, duplicates and field coverage).
-- A concise view of the numeric measures available in the file, without inventing a currency or profit figure.
-- Product/category, channel, region or time comparisons where the supplied fields support them.
-- A short list of evidence-backed observations and practical follow-up questions.
-- An executive HTML report and an XLSX workbook.
-- A human review of the output before delivery.
+## What the pilot includes
 
-### Pilot price
+1. **Data-quality review** — missing values, duplicate records, field coverage and structural issues.
+2. **Sales overview** — only measures that can be calculated from the supplied columns and agreed definitions.
+3. **Useful comparisons** — product/category, channel, region or time comparisons where the data supports them.
+4. **Evidence-backed observations** — concise findings tied to the actual rows and metrics, plus questions to investigate.
+5. **Two deliverables** — an executive HTML report and an XLSX workbook.
+6. **Human review** — findings and caveats checked before delivery.
 
-**US$49 for one dataset / one report.**
+## What the customer provides
 
-This is an introductory validation price. It is not an in-app subscription or an automatic checkout offer. Confirm the dataset scope, fields, delivery date and payment method with the customer before accepting the work.
+One CSV or Excel export containing the sales/order data relevant to a specific business question. The customer must remove names, emails, phone numbers, addresses, payment details and other personal or confidential information before sharing it.
 
-### What the customer needs to provide
+## What this does not promise
 
-A CSV or Excel export containing the sales/order data they want reviewed. They should remove names, emails, phone numbers, addresses, payment details and any other personal or confidential fields before sharing it.
+- Profit or margin without reliable cost data and agreed definitions.
+- Advertising ROI, attribution, customer lifetime value, inventory forecasts or tax/accounting conclusions without the necessary source data and methodology.
+- Causal explanations, predictions, guaranteed savings or revenue growth.
+- SaaS accounts, persistent cloud workspaces, collaboration, automated recurring reports or in-app payments.
 
-### What is not promised
+## Before accepting a dataset
 
-- Profit, margin, customer lifetime value, inventory, tax, refunds or advertising ROI unless the necessary reliable fields and definitions are present.
-- Causal explanations, forecasts, guaranteed savings or guaranteed revenue growth.
-- Accounting, tax, legal or audit advice.
-- Automated recurring reports, team accounts, cloud file storage or in-app payments.
+Confirm the business question, what each row represents, date range, currency, and the meaning of revenue, discounts, refunds and cost fields. If definitions are ambiguous, narrow the scope or decline the requested conclusion rather than guessing.
 
-## Qualification questions
+## Demonstration
 
-Before accepting a file, establish:
-1. What business decision is the customer trying to make?
-2. What does each row represent (order, order line, product, day, etc.)?
-3. Which columns represent revenue, cost, refunds, discounts and dates, and what are their definitions?
-4. What date range and currency are represented, if known?
-5. Has the customer removed personal and confidential information?
+The public sample is deliberately fictional. It demonstrates the report format and calculation transparency only; it is not a customer case study, benchmark, testimonial or expected result.
 
-Do not proceed if the source definitions are unclear enough to make the requested conclusion misleading.
+- [Read the sample guide](sample/DEMO_GUIDE.md)
+- [Open the synthetic HTML report](sample/SALES_SAMPLE_REPORT.html)
+- [Inspect the exact synthetic source data](sample/synthetic_orders.csv)
 
-## Delivery checklist
+## Customer journey
 
-- [ ] Confirm scope, price, delivery date and payment arrangement.
-- [ ] Receive a sanitized CSV/XLSX file.
-- [ ] Inspect the source preview and intake warnings.
-- [ ] Confirm row grain, date range, currency and metric definitions with the customer.
-- [ ] Run analysis and review every material finding against the source data.
-- [ ] Remove unsupported or ambiguous claims.
-- [ ] Export the HTML report and XLSX workbook.
-- [ ] Deliver the files and explain key limitations.
-- [ ] Delete local working copies when no longer needed, subject to any agreed retention obligation.
+1. Discuss the business question and confirm that the export contains suitable fields.
+2. Agree the fixed scope, US$49 pilot price, delivery date and payment method.
+3. Customer shares a sanitized export only after the arrangement is confirmed.
+4. Review the data and definitions; ask for clarification where needed.
+5. Produce and manually review the report and workbook.
+6. Deliver both files with a short explanation of limitations.
 
-## Outreach message
+## Internal integrity rules
 
-Hi! I’m working on DataPilot AI, a data-analysis service for small online businesses. I’m offering a small number of introductory sales-data reviews.
-
-If you can export your orders or sales data to CSV/Excel (with personal information removed), I can turn it into an executive report covering data quality, the sales measures available in the file, product/category or time patterns, and evidence-backed questions worth investigating.
-
-The pilot price is $49 for one report. I can share a sample using fictional data first. Would this be useful for your business?
-
-## Internal operating rule
-
-Never describe a prospect as a customer, claim a report has been delivered, or count revenue until the customer has explicitly agreed, payment is confirmed, and the report is completed. Do not send unsolicited messages or upload customer data to a third-party AI provider without the customer's informed permission.
+Do not describe a prospect as a customer, claim work was delivered, or count revenue until agreement, cleared payment and completed delivery are all confirmed. Do not upload customer data to a third-party AI provider without informed permission. Never send outreach without owner approval of the exact recipients and message.
